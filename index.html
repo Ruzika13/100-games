@@ -1,0 +1,484 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ArcadeOS | Multiplayer Platform</title>
+    <!-- PeerJS for Serverless Online Multiplayer -->
+    <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
+    <style>
+        :root {
+            --bg: #0f172a;
+            --panel: #1e293b;
+            --accent: #3b82f6;
+            --accent-hover: #2563eb;
+            --text: #f8fafc;
+            --win: #22c55e;
+            --lose: #ef4444;
+        }
+        body {
+            font-family: 'Segoe UI', system-ui, sans-serif;
+            background-color: var(--bg);
+            color: var(--text);
+            margin: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+        }
+        header {
+            width: 100%;
+            background: var(--panel);
+            padding: 20px;
+            text-align: center;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+            margin-bottom: 30px;
+        }
+        h1 { margin: 0; color: var(--accent); letter-spacing: 2px; }
+        
+        /* Navigation / Views */
+        .view { display: none; width: 100%; max-width: 600px; padding: 20px; box-sizing: border-box; }
+        .view.active { display: block; }
+
+        /* Hub Styles */
+        .game-card {
+            background: var(--panel);
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 15px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border: 1px solid #334155;
+            transition: transform 0.2s;
+        }
+        .game-card:hover { transform: translateY(-2px); border-color: var(--accent); }
+        .btn {
+            background: var(--accent);
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 14px;
+        }
+        .btn:hover { background: var(--accent-hover); }
+        .btn-secondary { background: #475569; }
+        .btn-secondary:hover { background: #64748b; }
+
+        /* Game UI */
+        .mode-select { display: flex; gap: 10px; margin-bottom: 20px; flex-wrap: wrap; }
+        .board {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+            max-width: 400px;
+            margin: 0 auto;
+        }
+        .cell {
+            aspect-ratio: 1;
+            background: var(--panel);
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 3rem;
+            font-weight: bold;
+            cursor: pointer;
+            border: 2px solid #334155;
+            transition: background 0.2s;
+        }
+        .cell:hover { background: #334155; }
+        .cell.x { color: var(--accent); }
+        .cell.o { color: var(--lose); }
+        
+        .status-bar {
+            text-align: center;
+            margin: 20px 0;
+            font-size: 1.2rem;
+            font-weight: bold;
+            min-height: 30px;
+        }
+        .online-panel {
+            background: #0f172a;
+            border: 1px dashed var(--accent);
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+        input {
+            background: var(--panel);
+            border: 1px solid #475569;
+            color: white;
+            padding: 8px;
+            border-radius: 4px;
+            font-size: 16px;
+            text-align: center;
+            text-transform: uppercase;
+            width: 100px;
+        }
+        .hidden { display: none !important; }
+    </style>
+</head>
+<body>
+
+<header>
+    <h1>ARCADE OS</h1>
+    <p style="color: #94a3b8; margin-top: 5px;">Multiplayer Gaming Platform</p>
+</header>
+
+<!-- HUB VIEW -->
+<div id="hub-view" class="view active">
+    <h2>🎮 Select a Game</h2>
+    <div class="game-card">
+        <div>
+            <h3>Tic-Tac-Toe Ultimate</h3>
+            <p style="color: #94a3b8; font-size: 14px;">Play vs AI (3 difficulties), Local, or Online via Room Code.</p>
+        </div>
+        <button class="btn" onclick="showView('game-ttt')">Play Now</button>
+    </div>
+    <div class="game-card" style="opacity: 0.5;">
+        <div>
+            <h3>Connect 4</h3>
+            <p style="color: #94a3b8; font-size: 14px;">Coming in Phase 2...</p>
+        </div>
+        <button class="btn btn-secondary" disabled>Locked</a>
+    </div>
+</div>
+
+<!-- TIC-TAC-TOE VIEW -->
+<div id="game-ttt" class="view">
+    <button class="btn btn-secondary" onclick="showView('hub-view')" style="margin-bottom: 20px;">← Back to Hub</button>
+    
+    <div class="mode-select" id="ttt-modes">
+        <button class="btn" onclick="startGame('ai-easy')">vs AI (Easy)</button>
+        <button class="btn" onclick="startGame('ai-hard')">vs AI (Hard)</button>
+        <button class="btn" onclick="startGame('ai-extreme')">vs AI (Very Hard)</button>
+        <button class="btn" onclick="startGame('local')">Local 2-Player</button>
+        <button class="btn" onclick="showOnlineMenu()">Online Multiplayer</button>
+    </div>
+
+    <!-- Online Menu -->
+    <div id="online-menu" class="online-panel hidden">
+        <h3>🌐 Online Multiplayer</h3>
+        <div id="host-section">
+            <p>Host a game and share this code:</p>
+            <h2 id="room-code-display" style="color: var(--accent); letter-spacing: 3px;">---</h2>
+            <button class="btn" onclick="hostGame()">Generate Code & Host</button>
+        </div>
+        <div style="margin: 15px 0; color: #64748b;">- OR -</div>
+        <div id="join-section">
+            <p>Enter room code to join:</p>
+            <input type="text" id="join-code-input" maxlength="6" placeholder="ABC123">
+            <button class="btn" onclick="joinGame()">Join</button>
+        </div>
+        <p id="online-status" style="color: #fbbf24; margin-top: 10px;"></p>
+    </div>
+
+    <div class="status-bar" id="status-text">Choose a mode to start</div>
+    
+    <div class="board" id="board">
+        <!-- Cells generated by JS -->
+    </div>
+    
+    <div style="text-align: center; margin-top: 20px;">
+        <button class="btn btn-secondary" onclick="resetBoard()">Restart Game</button>
+    </div>
+</div>
+
+<script>
+    // --- PLATFORM NAVIGATION ---
+    function showView(viewId) {
+        document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+        document.getElementById(viewId).classList.add('active');
+        resetGame();
+    }
+
+    // --- GAME STATE ---
+    let board = Array(9).fill(null);
+    let currentPlayer = 'X';
+    let gameMode = 'local'; // 'local', 'ai-easy', 'ai-hard', 'ai-extreme', 'online-host', 'online-join'
+    let isGameActive = false;
+    let myOnlineSymbol = 'X'; // For online play
+
+    // --- PEERJS NETWORKING ---
+    let peer = null;
+    let conn = null;
+
+    function initPeer() {
+        if (peer) return;
+        // Initialize PeerJS (uses free PeerJS cloud server for signaling)
+        peer = new Peer(); 
+        peer.on('error', (err) => {
+            document.getElementById('online-status').innerText = "Connection error: " + err.type;
+        });
+    }
+
+    function hostGame() {
+        initPeer();
+        // Generate a random 6-character alphanumeric code
+        const code = Math.random().toString(36).substring(2, 8).toUpperCase();
+        
+        // Re-initialize peer with custom ID (the room code)
+        peer.destroy();
+        peer = new Peer(code);
+        
+        peer.on('open', (id) => {
+            document.getElementById('room-code-display').innerText = id;
+            document.getElementById('online-status').innerText = "Waiting for opponent to join...";
+        });
+
+        peer.on('connection', (c) => {
+            conn = c;
+            setupConnection();
+            document.getElementById('online-status').innerText = "Opponent joined! You are X. Starting...";
+            gameMode = 'online-host';
+            myOnlineSymbol = 'X';
+            startGame('online-host');
+        });
+    }
+
+    function joinGame() {
+        const code = document.getElementById('join-code-input').value.toUpperCase();
+        if (code.length !== 6) {
+            alert("Please enter a valid 6-character code.");
+            return;
+        }
+        initPeer();
+        document.getElementById('online-status').innerText = "Connecting...";
+        
+        conn = peer.connect(code);
+        setupConnection();
+        
+        conn.on('open', () => {
+            document.getElementById('online-status').innerText = "Connected! You are O. Waiting for host...";
+            gameMode = 'online-join';
+            myOnlineSymbol = 'O';
+            // We wait for the host to send the start signal
+        });
+    }
+
+    function setupConnection() {
+        conn.on('data', (data) => {
+            if (data.type === 'move') {
+                makeMove(data.index, data.player, false); // false = don't broadcast back
+            } else if (data.type === 'restart') {
+                resetBoard();
+            }
+        });
+    }
+
+    function broadcastMove(index, player) {
+        if (conn && conn.open) {
+            conn.send({ type: 'move', index: index, player: player });
+        }
+    }
+
+    function broadcastRestart() {
+        if (conn && conn.open) {
+            conn.send({ type: 'restart' });
+        }
+    }
+
+    // --- GAME LOGIC ---
+    function showOnlineMenu() {
+        document.getElementById('online-menu').classList.remove('hidden');
+        document.getElementById('status-text').innerText = "Online Multiplayer Setup";
+    }
+
+    function startGame(mode) {
+        gameMode = mode;
+        document.getElementById('online-menu').classList.add('hidden');
+        resetBoard();
+        
+        let modeText = mode.replace('ai-', 'vs AI (').replace('local', 'Local 2-Player').replace('online-', 'Online (') + (mode.includes('ai') || mode.includes('online') ? ')' : '');
+        document.getElementById('status-text').innerText = `Mode: ${modeText} | Player X's Turn`;
+    }
+
+    function resetBoard() {
+        board = Array(9).fill(null);
+        currentPlayer = 'X';
+        isGameActive = true;
+        renderBoard();
+        if (gameMode.includes('online-join')) {
+            document.getElementById('status-text').innerText = "Waiting for Host (X) to start...";
+        } else {
+            document.getElementById('status-text').innerText = `Player ${currentPlayer}'s Turn`;
+        }
+        broadcastRestart();
+    }
+
+    function resetGame() {
+        isGameActive = false;
+        if (conn) conn.close();
+        // Note: We don't destroy peer entirely to allow quick re-hosting, but in a full app we might.
+    }
+
+    function renderBoard() {
+        const boardEl = document.getElementById('board');
+        boardEl.innerHTML = '';
+        board.forEach((cell, index) => {
+            const cellEl = document.createElement('div');
+            cellEl.className = `cell ${cell ? cell.toLowerCase() : ''}`;
+            cellEl.innerText = cell || '';
+            cellEl.onclick = () => handleCellClick(index);
+            boardEl.appendChild(cellEl);
+        });
+    }
+
+    function handleCellClick(index) {
+        if (!isGameActive || board[index]) return;
+
+        // Online validation: Can only move if it's your symbol's turn
+        if (gameMode.includes('online') && currentPlayer !== myOnlineSymbol) {
+            return; 
+        }
+
+        makeMove(index, currentPlayer, true);
+    }
+
+    function makeMove(index, player, shouldBroadcast) {
+        board[index] = player;
+        renderBoard();
+
+        if (shouldBroadcast && gameMode.includes('online')) {
+            broadcastMove(index, player);
+        }
+
+        if (checkWin(player)) {
+            isGameActive = false;
+            document.getElementById('status-text').innerText = `🎉 Player ${player} Wins!`;
+            document.getElementById('status-text').style.color = 'var(--win)';
+            return;
+        }
+
+        if (board.every(cell => cell !== null)) {
+            isGameActive = false;
+            document.getElementById('status-text').innerText = `🤝 It's a Draw!`;
+            document.getElementById('status-text').style.color = '#fbbf24';
+            return;
+        }
+
+        currentPlayer = currentPlayer === 'X' ? 'O' : 'X';
+        
+        if (!gameMode.includes('online')) {
+            document.getElementById('status-text').innerText = `Player ${currentPlayer}'s Turn`;
+            document.getElementById('status-text').style.color = 'var(--text)';
+        } else {
+            document.getElementById('status-text').innerText = currentPlayer === myOnlineSymbol ? "Your Turn!" : "Opponent's Turn...";
+        }
+
+        // AI Turn Trigger
+        if (gameMode.startsWith('ai') && currentPlayer === 'O' && isGameActive) {
+            setTimeout(() => makeAIMove(), 500); // Small delay for realism
+        }
+    }
+
+    // --- AI LOGIC ---
+    function makeAIMove() {
+        let move;
+        if (gameMode === 'ai-easy') {
+            move = getRandomMove();
+        } else if (gameMode === 'ai-hard') {
+            move = getSmartMove(); // Blocks and wins, but makes mistakes
+        } else {
+            move = getBestMove(); // Minimax (Unbeatable)
+        }
+        
+        if (move !== -1) {
+            makeMove(move, 'O', false);
+        }
+    }
+
+    function getRandomMove() {
+        const available = board.map((v, i) => v === null ? i : null).filter(v => v !== null);
+        return available[Math.floor(Math.random() * available.length)];
+    }
+
+    function getSmartMove() {
+        // 1. Try to win
+        for (let i = 0; i < 9; i++) {
+            if (!board[i]) {
+                board[i] = 'O';
+                if (checkWin('O')) { board[i] = null; return i; }
+                board[i] = null;
+            }
+        }
+        // 2. Block player win
+        for (let i = 0; i < 9; i++) {
+            if (!board[i]) {
+                board[i] = 'X';
+                if (checkWin('X')) { board[i] = null; return i; }
+                board[i] = null;
+            }
+        }
+        // 3. Random
+        return getRandomMove();
+    }
+
+    // Minimax Algorithm for "Very Hard"
+    function getBestMove() {
+        let bestScore = -Infinity;
+        let bestMove = -1;
+        for (let i = 0; i < 9; i++) {
+            if (!board[i]) {
+                board[i] = 'O';
+                let score = minimax(board, 0, false);
+                board[i] = null;
+                if (score > bestScore) {
+                    bestScore = score;
+                    bestMove = i;
+                }
+            }
+        }
+        return bestMove;
+    }
+
+    const scores = { X: -10, O: 10, tie: 0 };
+
+    function minimax(boardState, depth, isMaximizing) {
+        if (checkWin('O')) return scores.O - depth; // Prefer faster wins
+        if (checkWin('X')) return scores.X + depth; // Prefer slower losses
+        if (boardState.every(cell => cell !== null)) return scores.tie;
+
+        if (isMaximizing) {
+            let bestScore = -Infinity;
+            for (let i = 0; i < 9; i++) {
+                if (!boardState[i]) {
+                    boardState[i] = 'O';
+                    let score = minimax(boardState, depth + 1, false);
+                    boardState[i] = null;
+                    bestScore = Math.max(score, bestScore);
+                }
+            }
+            return bestScore;
+        } else {
+            let bestScore = Infinity;
+            for (let i = 0; i < 9; i++) {
+                if (!boardState[i]) {
+                    boardState[i] = 'X';
+                    let score = minimax(boardState, depth + 1, true);
+                    boardState[i] = null;
+                    bestScore = Math.min(score, bestScore);
+                }
+            }
+            return bestScore;
+        }
+    }
+
+    function checkWin(player) {
+        const wins = [
+            [0,1,2], [3,4,5], [6,7,8], // Rows
+            [0,3,6], [1,4,7], [2,5,8], // Cols
+            [0,4,8], [2,4,6]           // Diagonals
+        ];
+        return wins.some(combo => combo.every(i => board[i] === player));
+    }
+
+    // Initialize empty board on load
+    renderBoard();
+</script>
+</body>
+</html>
