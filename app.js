@@ -1,18 +1,28 @@
 const App = {
     peer: null,
     conn: null,
+    currentGame: null, // Track active game for cleanup
 
-    // Switch between Hub and Game screens
     showView: function(viewId) {
+        // 1. Cleanup any running game before switching views
+        if (this.currentGame === 'tictactoe') TicTacToe.cleanup();
+        if (this.currentGame === 'barricade') Barricade.cleanup();
+        this.currentGame = null;
+
+        // 2. Switch views
         document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
         document.getElementById(viewId).classList.add('active');
-        // Clean up game state when leaving
-        if (viewId === 'hub-view') {
-            TicTacToe.cleanup();
+
+        // 3. Initialize game if entering a game view
+        if (viewId === 'game-ttt') {
+            this.currentGame = 'tictactoe';
+            TicTacToe.init();
+        } else if (viewId === 'game-barricade') {
+            this.currentGame = 'barricade';
+            Barricade.init();
         }
     },
 
-    // --- PEERJS NETWORKING ---
     initPeer: function() {
         if (this.peer) return;
         this.peer = new Peer(); 
@@ -24,15 +34,12 @@ const App = {
     hostGame: function() {
         this.initPeer();
         const code = Math.random().toString(36).substring(2, 8).toUpperCase();
-        
         this.peer.destroy();
         this.peer = new Peer(code);
-        
         this.peer.on('open', (id) => {
             document.getElementById('room-code-display').innerText = id;
             document.getElementById('online-status').innerText = "Waiting for opponent to join...";
         });
-
         this.peer.on('connection', (c) => {
             this.conn = c;
             this.setupConnection();
@@ -49,10 +56,8 @@ const App = {
         }
         this.initPeer();
         document.getElementById('online-status').innerText = "Connecting...";
-        
         this.conn = this.peer.connect(code);
         this.setupConnection();
-        
         this.conn.on('open', () => {
             document.getElementById('online-status').innerText = "Connected! You are O. Waiting for host...";
             TicTacToe.start('online-join');
