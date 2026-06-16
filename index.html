@@ -31,7 +31,15 @@
             <h3>Barricade</h3>
             <p style="color: #94a3b8; font-size: 14px;">Tower Defense. Protect the Core from endless waves. (Single Player)</p>
         </div>
-        <button class="btn" onclick="App.showView('game-barricade')">Play Now</button
+        <button class="btn" onclick="App.showView('game-barricade')">Play Now</button>
+    </div>
+
+    <div class="game-card">
+        <div>
+            <h3>Connect 4</h3>
+            <p style="color: #94a3b8; font-size: 14px;">Classic strategy. Get 4 in a row. Features Online & Unbeatable AI.</p>
+        </div>
+        <button class="btn" onclick="App.showView('game-c4')">Play Now</button>
     </div>
 </div>
 
@@ -70,14 +78,12 @@
 <!-- BARRICADE VIEW -->
 <div id="game-barricade" class="view">
     <button class="btn btn-secondary" onclick="App.showView('hub-view')" style="margin-bottom: 20px;">← Back to Hub</button>
-    
     <div class="barricade-hud">
         <div class="hud-item">❤️ Core: <span id="b-core-hp">100</span></div>
         <div class="hud-item">💰 Money: <span id="b-money">50</span></div>
         <div class="hud-item">🌊 Wave: <span id="b-wave">1</span></div>
         <div class="hud-item">🏆 Score: <span id="b-score">0</span></div>
     </div>
-
     <div class="canvas-container">
         <canvas id="barricade-canvas" width="600" height="600"></canvas>
         <div id="barricade-message" class="overlay-message hidden">
@@ -86,16 +92,47 @@
             <button class="btn" onclick="Barricade.start()">Play Again</button>
         </div>
     </div>
-    
     <div class="instructions">
-        <strong>How to Play:</strong> Click on any empty grid tile to build a Wall (Cost: 10 💰). 
-        Walls have 50 HP. Click on Enemies to shoot them (Cost: 0, deals 10 damage). Protect the blue Core!
+        <strong>How to Play:</strong> Click empty tiles to build Walls (10 💰). Click Enemies to shoot them. Protect the Core!
+    </div>
+</div>
+
+<!-- CONNECT 4 VIEW -->
+<div id="game-c4" class="view">
+    <button class="btn btn-secondary" onclick="App.showView('hub-view')" style="margin-bottom: 20px;">← Back to Hub</button>
+    <div class="mode-select" id="c4-modes">
+        <button class="btn" onclick="Connect4.start('ai-easy')">vs AI (Easy)</button>
+        <button class="btn" onclick="Connect4.start('ai-hard')">vs AI (Hard)</button>
+        <button class="btn" onclick="Connect4.start('ai-extreme')">vs AI (Very Hard)</button>
+        <button class="btn" onclick="Connect4.start('local')">Local 2-Player</button>
+        <button class="btn" onclick="Connect4.showOnlineMenu()">Online Multiplayer</button>
+    </div>
+    <div id="c4-online-menu" class="online-panel hidden">
+        <h3>🌐 Online Multiplayer</h3>
+        <div id="c4-host-section">
+            <p>Host a game and share this code:</p>
+            <h2 id="c4-room-code-display" style="color: var(--accent); letter-spacing: 3px;">---</h2>
+            <button class="btn" onclick="App.hostGame('c4')">Generate Code & Host</button>
+        </div>
+        <div style="margin: 15px 0; color: #64748b;">- OR -</div>
+        <div id="c4-join-section">
+            <p>Enter room code to join:</p>
+            <input type="text" id="c4-join-code-input" maxlength="6" placeholder="ABC123">
+            <button class="btn" onclick="App.joinGame('c4')">Join</button>
+        </div>
+        <p id="c4-online-status" style="color: #fbbf24; margin-top: 10px;"></p>
+    </div>
+    <div class="status-bar" id="c4-status-text">Choose a mode to start</div>
+    <div class="c4-board" id="c4-board"></div>
+    <div style="text-align: center; margin-top: 20px;">
+        <button class="btn btn-secondary" onclick="Connect4.resetBoard()">Restart Game</button>
     </div>
 </div>
 
 <script src="app.js"></script>
 <script src="games/tictactoe.js"></script>
 <script src="games/barricade.js"></script>
+<script src="games/connect4.js"></script>
 
 </body>
 </html>
