@@ -239,3 +239,20 @@ canvas {
     from { opacity: 0; transform: translateY(10px); }
     to { opacity: 1; transform: translateY(0); }
 }
+
+#online-status, #c4-online-status {
+    transition: all 0.3s ease;
+    padding: 10px;
+    border-radius: 6px;
+    background: rgba(255,255,255,0.05);
+    margin-top: 10px;
+}
+
+#room-code-display, #c4-room-code-display {
+    font-family: 'Courier New', monospace;
+    background: rgba(59, 130, 246, 0.2);
+    padding: 10px 20px;
+    border-radius: 8px;
+    display: inline-block;
+    margin: 10px 0;
+}
