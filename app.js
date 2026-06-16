@@ -2,29 +2,68 @@ const App = {
     peer: null,
     conn: null,
     currentGame: null,
-    activeOnlineGame: null, // 'ttt' or 'c4'
+    activeOnlineGame: null,
 
     showView: function(viewId) {
+        console.log('Switching to view:', viewId);
+        
         // 1. Cleanup any running game before switching views
-        if (this.currentGame === 'tictactoe') TicTacToe.cleanup();
-        if (this.currentGame === 'barricade') Barricade.cleanup();
-        if (this.currentGame === 'connect4') Connect4.cleanup();
+        try {
+            if (this.currentGame === 'tictactoe' && typeof TicTacToe !== 'undefined') {
+                TicTacToe.cleanup();
+            }
+            if (this.currentGame === 'barricade' && typeof Barricade !== 'undefined') {
+                Barricade.cleanup();
+            }
+            if (this.currentGame === 'connect4' && typeof Connect4 !== 'undefined') {
+                Connect4.cleanup();
+            }
+        } catch (e) {
+            console.error('Cleanup error:', e);
+        }
+        
         this.currentGame = null;
 
         // 2. Switch views
-        document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
-        document.getElementById(viewId).classList.add('active');
+        document.querySelectorAll('.view').forEach(v => {
+            v.classList.remove('active');
+        });
+        
+        const targetView = document.getElementById(viewId);
+        if (targetView) {
+            targetView.classList.add('active');
+            console.log('View switched successfully');
+        } else {
+            console.error('View not found:', viewId);
+            return;
+        }
 
         // 3. Initialize game if entering a game view
-        if (viewId === 'game-ttt') {
-            this.currentGame = 'tictactoe';
-            TicTacToe.init();
-        } else if (viewId === 'game-barricade') {
-            this.currentGame = 'barricade';
-            Barricade.init();
-        } else if (viewId === 'game-c4') {
-            this.currentGame = 'connect4';
-            Connect4.init();
+        try {
+            if (viewId === 'game-ttt') {
+                this.currentGame = 'tictactoe';
+                if (typeof TicTacToe !== 'undefined') {
+                    TicTacToe.init();
+                } else {
+                    console.error('TicTacToe not loaded');
+                }
+            } else if (viewId === 'game-barricade') {
+                this.currentGame = 'barricade';
+                if (typeof Barricade !== 'undefined') {
+                    Barricade.init();
+                } else {
+                    console.error('Barricade not loaded');
+                }
+            } else if (viewId === 'game-c4') {
+                this.currentGame = 'connect4';
+                if (typeof Connect4 !== 'undefined') {
+                    Connect4.init();
+                } else {
+                    console.error('Connect4 not loaded');
+                }
+            }
+        } catch (e) {
+            console.error('Game initialization error:', e);
         }
     },
 
@@ -32,7 +71,9 @@ const App = {
         if (this.peer) return;
         this.peer = new Peer(); 
         this.peer.on('error', (err) => {
-            const statusEl = this.activeOnlineGame === 'c4' ? document.getElementById('c4-online-status') : document.getElementById('online-status');
+            const statusEl = this.activeOnlineGame === 'c4' ? 
+                document.getElementById('c4-online-status') : 
+                document.getElementById('online-status');
             if(statusEl) statusEl.innerText = "Connection error: " + err.type;
         });
     },
@@ -52,9 +93,13 @@ const App = {
         this.peer.on('connection', (c) => {
             this.conn = c;
             this.setupConnection(gameType);
-            document.getElementById(`${prefix}online-status`).innerText = "Opponent joined! You are Red (1st). Starting...";
-            if (gameType === 'c4') Connect4.start('online-host');
-            else TicTacToe.start('online-host');
+            document.getElementById(`${prefix}online-status`).innerText = "Opponent joined! You are " + 
+                (gameType === 'c4' ? "Red (1st)" : "X (1st)") + ". Starting...";
+            if (gameType === 'c4') {
+                if (typeof Connect4 !== 'undefined') Connect4.start('online-host');
+            } else {
+                if (typeof TicTacToe !== 'undefined') TicTacToe.start('online-host');
+            }
         });
     },
 
@@ -71,20 +116,30 @@ const App = {
         this.conn = this.peer.connect(code);
         this.setupConnection(gameType);
         this.conn.on('open', () => {
-            document.getElementById(`${prefix}online-status`).innerText = "Connected! You are Yellow (2nd). Waiting for host...";
-            if (gameType === 'c4') Connect4.start('online-join');
-            else TicTacToe.start('online-join');
+            document.getElementById(`${prefix}online-status`).innerText = "Connected! You are " + 
+                (gameType === 'c4' ? "Yellow (2nd)" : "O (2nd)") + ". Waiting for host...";
+            if (gameType === 'c4') {
+                if (typeof Connect4 !== 'undefined') Connect4.start('online-join');
+            } else {
+                if (typeof TicTacToe !== 'undefined') TicTacToe.start('online-join');
+            }
         });
     },
 
     setupConnection: function(gameType) {
         this.conn.on('data', (data) => {
             if (data.type === 'move') {
-                if (gameType === 'c4') Connect4.makeMove(data.col, data.player, false);
-                else TicTacToe.makeMove(data.index, data.player, false);
+                if (gameType === 'c4') {
+                    if (typeof Connect4 !== 'undefined') Connect4.makeMove(data.col, data.player, false);
+                } else {
+                    if (typeof TicTacToe !== 'undefined') TicTacToe.makeMove(data.index, data.player, false);
+                }
             } else if (data.type === 'restart') {
-                if (gameType === 'c4') Connect4.resetBoard();
-                else TicTacToe.resetBoard();
+                if (gameType === 'c4') {
+                    if (typeof Connect4 !== 'undefined') Connect4.resetBoard();
+                } else {
+                    if (typeof TicTacToe !== 'undefined') TicTacToe.resetBoard();
+                }
             }
         });
     },
