@@ -79,21 +79,23 @@
 <div id="game-barricade" class="view">
     <button class="btn btn-secondary" onclick="App.showView('hub-view')" style="margin-bottom: 20px;">← Back to Hub</button>
     <div class="barricade-hud">
-        <div class="hud-item">❤️ Core: <span id="b-core-hp">100</span></div>
-        <div class="hud-item">💰 Money: <span id="b-money">50</span></div>
-        <div class="hud-item">🌊 Wave: <span id="b-wave">1</span></div>
         <div class="hud-item">🏆 Score: <span id="b-score">0</span></div>
+        <div class="hud-item">🧱 Barricades: <span id="b-walls">0</span></div>
+        <div class="hud-item">⏱️ Time: <span id="b-time">0</span>s</div>
+        <div class="hud-item" id="b-turn-indicator" style="color: #3b82f6;">Your Turn</div>
     </div>
     <div class="canvas-container">
-        <canvas id="barricade-canvas" width="600" height="600"></canvas>
+        <canvas id="barricade-canvas" width="500" height="500"></canvas>
         <div id="barricade-message" class="overlay-message hidden">
             <h2 id="b-msg-title">Game Over</h2>
-            <p id="b-msg-text">Your core was destroyed!</p>
+            <p id="b-msg-text">The AI caught you!</p>
             <button class="btn" onclick="Barricade.start()">Play Again</button>
         </div>
     </div>
     <div class="instructions">
-        <strong>How to Play:</strong> Click empty tiles to build Walls (10 💰). Click Enemies to shoot them. Protect the Core!
+        <strong>How to Play:</strong> You are <span style="color:#3b82f6">Blue</span> (bottom-left). AI is <span style="color:#ef4444">Red</span> (top-right).<br>
+        <strong>Arrow Keys:</strong> Move 1 step. <strong>Mouse Click:</strong> Place a barricade on an empty cell.<br>
+        Every action ends your turn. Trap the AI to win. If it reaches you, you lose!
     </div>
 </div>
 
