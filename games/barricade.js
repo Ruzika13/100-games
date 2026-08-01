@@ -1,141 +1,119 @@
-<!-- Language: HTML -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Interactive To-Do List</title>
-    <style>
-        /* CSS for styling the to-do list */
-        body {
-            font-family: Arial, sans-serif;
-            background-color: #f2f2f2;
-            display: flex;
-            justify-content: center;
-            align-items: flex-start;
-            min-height: 100vh;
-            padding-top: 50px;
-        }
-
-        .container {
-            background-color: #fff;
-            padding: 20px 30px;
-            border-radius: 8px;
-            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
-            width: 300px;
-        }
-
-        h2 {
-            text-align: center;
-            color: #333;
-        }
-
-        input[type="text"] {
-            width: 100%;
-            padding: 10px;
-            margin-bottom: 10px;
-            border-radius: 4px;
-            border: 1px solid #ccc;
-            box-sizing: border-box;
-        }
-
-        button {
-            width: 100%;
-            padding: 10px;
-            border: none;
-            background-color: #28a745;
-            color: white;
-            font-size: 16px;
-            cursor: pointer;
-            border-radius: 4px;
-        }
-
-        button:hover {
-            background-color: #218838;
-        }
-
-        ul {
-            list-style: none;
-            padding: 0;
-        }
-
-        li {
-            padding: 10px;
-            background: #fafafa;
-            margin-bottom: 5px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            border-radius: 4px;
-            border: 1px solid #ddd;
-        }
-
-        li.completed {
-            text-decoration: line-through;
-            color: #999;
-        }
-
-        .delete-btn {
-            background: #dc3545;
-            border: none;
-            color: white;
-            padding: 5px 8px;
-            border-radius: 4px;
-            cursor: pointer;
-        }
-
-        .delete-btn:hover {
-            background: #c82333;
-        }
-    </style>
+  <meta charset="UTF-8">
+  <title>Barricade vs AI</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      text-align: center;
+      background: #222;
+      color: #fff;
+    }
+    #gameBoard {
+      display: grid;
+      grid-template-columns: repeat(10, 40px);
+      grid-template-rows: repeat(10, 40px);
+      gap: 2px;
+      margin: 20px auto;
+    }
+    .cell {
+      width: 40px;
+      height: 40px;
+      background: #444;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+    .player { background: #4caf50; }
+    .ai { background: #f44336; }
+    .barricade { background: #888; }
+    #status {
+      margin-top: 15px;
+      font-size: 18px;
+    }
+  </style>
 </head>
 <body>
-    <div class="container">
-        <h2>My To-Do List</h2>
-        <input type="text" id="todoInput" placeholder="Add a new task...">
-        <button onclick="addTask()">Add Task</button>
-        <ul id="todoList"></ul>
-    </div>
+  <h1>Barricade vs AI</h1>
+  <div id="gameBoard"></div>
+  <p id="status"></p>
 
-    <script>
-        // JavaScript to handle adding, completing, and deleting tasks
-        const todoInput = document.getElementById('todoInput');
-        const todoList = document.getElementById('todoList');
+  <script>
+    const board = document.getElementById("gameBoard");
+    const status = document.getElementById("status");
+    const size = 10;
 
-        function addTask() {
-            const taskText = todoInput.value.trim();
-            if(taskText === "") return;
+    let player = {x:0, y:0};
+    let ai = {x:9, y:9};
+    let barricades = [];
+    let gameOver = false;
 
-            const li = document.createElement('li');
-            li.textContent = taskText;
-
-            // Toggle completed class on click
-            li.addEventListener('click', () => {
-                li.classList.toggle('completed');
-            });
-
-            // Delete button
-            const deleteBtn = document.createElement('button');
-            deleteBtn.textContent = 'Delete';
-            deleteBtn.classList.add('delete-btn');
-            deleteBtn.addEventListener('click', (event) => {
-                event.stopPropagation(); // Prevent toggling completed
-                todoList.removeChild(li);
-            });
-
-            li.appendChild(deleteBtn);
-            todoList.appendChild(li);
-
-            // Clear input
-            todoInput.value = '';
+    function drawBoard() {
+      board.innerHTML = "";
+      for (let y=0; y<size; y++) {
+        for (let x=0; x<size; x++) {
+          const cell = document.createElement("div");
+          cell.classList.add("cell");
+          if (x===player.x && y===player.y) cell.classList.add("player");
+          if (x===ai.x && y===ai.y) cell.classList.add("ai");
+          if (barricades.some(b=>b.x===x && b.y===y)) cell.classList.add("barricade");
+          cell.addEventListener("click", ()=>placeBarricade(x,y));
+          board.appendChild(cell);
         }
+      }
+    }
 
-        // Optional: enable pressing Enter key to add task
-        todoInput.addEventListener('keypress', (event) => {
-            if(event.key === 'Enter') {
-                addTask();
-            }
-        });
-    </script>
+    function placeBarricade(x,y) {
+      if (gameOver) return;
+      if ((x===player.x && y===player.y) || (x===ai.x && y===ai.y)) return;
+      if (barricades.some(b=>b.x===x && b.y===y)) return;
+      barricades.push({x,y});
+      aiMove();
+      checkGameOver();
+      drawBoard();
+    }
+
+    function aiMove() {
+      // Simple greedy AI: move closer to player
+      let dx = player.x - ai.x;
+      let dy = player.y - ai.y;
+      let newX = ai.x + Math.sign(dx);
+      let newY = ai.y + Math.sign(dy);
+
+      if (!isBlocked(newX, ai.y)) ai.x = newX;
+      else if (!isBlocked(ai.x, newY)) ai.y = newY;
+    }
+
+    function isBlocked(x,y) {
+      return barricades.some(b=>b.x===x && b.y===y);
+    }
+
+    function checkGameOver() {
+      if (ai.x===player.x && ai.y===player.y) {
+        status.textContent = "Game Over! AI caught you.";
+        gameOver = true;
+      }
+    }
+
+    document.addEventListener("keydown", e=>{
+      if (gameOver) return;
+      let newX = player.x;
+      let newY = player.y;
+      if (e.key==="ArrowUp") newY--;
+      if (e.key==="ArrowDown") newY++;
+      if (e.key==="ArrowLeft") newX--;
+      if (e.key==="ArrowRight") newX++;
+      if (newX>=0 && newX<size && newY>=0 && newY<size && !isBlocked(newX,newY)) {
+        player.x = newX;
+        player.y = newY;
+        aiMove();
+        checkGameOver();
+        drawBoard();
+      }
+    });
+
+    drawBoard();
+  </script>
 </body>
 </html>
