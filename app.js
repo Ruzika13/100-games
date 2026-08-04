@@ -18,7 +18,6 @@ const App = {
             if (this.currentGame === 'othello' && typeof Othello !== 'undefined') {
                 Othello.cleanup();
             }
-
         } catch (e) {
             console.error('Cleanup error:', e);
         }
@@ -50,7 +49,6 @@ const App = {
     initPeer: function() {
         if (this.peer) return;
         
-        // Enhanced PeerJS configuration with STUN/TURN servers
         const peerConfig = {
             debug: 2,
             config: {
@@ -84,15 +82,16 @@ const App = {
     },
 
     getStatusElement: function() {
-    const prefix = this.activeOnlineGame === 'c4' ? 'c4-' :
-                   this.activeOnlineGame === 'othello' ? 'o-' : '';
-    return document.getElementById(`${prefix}online-status`);
-},
-getRoomCodeElement: function() {
-    const prefix = this.activeOnlineGame === 'c4' ? 'c4-' :
-                   this.activeOnlineGame === 'othello' ? 'o-' : '';
-    return document.getElementById(`${prefix}room-code-display`);
-}
+        const prefix = this.activeOnlineGame === 'c4' ? 'c4-' :
+                       this.activeOnlineGame === 'othello' ? 'o-' : '';
+        return document.getElementById(`${prefix}online-status`);
+    },
+
+    getRoomCodeElement: function() {
+        const prefix = this.activeOnlineGame === 'c4' ? 'c4-' :
+                       this.activeOnlineGame === 'othello' ? 'o-' : '';
+        return document.getElementById(`${prefix}room-code-display`);
+    },
 
     hostGame: function(gameType = 'ttt') {
         this.activeOnlineGame = gameType;
@@ -101,7 +100,6 @@ getRoomCodeElement: function() {
         const statusEl = this.getStatusElement();
         const codeEl = this.getRoomCodeElement();
         
-        // Generate 6-character code
         const code = Math.random().toString(36).substring(2, 8).toUpperCase();
         
         if (statusEl) {
@@ -109,7 +107,6 @@ getRoomCodeElement: function() {
             statusEl.style.color = '#fbbf24';
         }
         
-        // Destroy old peer and create new one with custom ID
         if (this.peer.id) {
             this.peer.destroy();
         }
@@ -145,14 +142,13 @@ getRoomCodeElement: function() {
                 statusEl.style.color = '#22c55e';
             }
             
-            // Start game after brief delay
             setTimeout(() => {
                 if (gameType === 'c4') {
                     if (typeof Connect4 !== 'undefined') Connect4.start('online-host');
-                } else {
-                    if (typeof TicTacToe !== 'undefined') TicTacToe.start('online-host');
                 } else if (gameType === 'othello') {
                     if (typeof Othello !== 'undefined') Othello.start('online-host');
+                } else {
+                    if (typeof TicTacToe !== 'undefined') TicTacToe.start('online-host');
                 }
             }, 500);
         });
@@ -164,19 +160,15 @@ getRoomCodeElement: function() {
                     statusEl.innerHTML = '❌ Code already in use<br>Try again with a different code';
                     statusEl.style.color = '#ef4444';
                 }
-                // Auto-retry with new code
-              setTimeout(() => {
-                if (gameType === 'c4') {
-                    if (typeof Connect4 !== 'undefined') Connect4.start('online-join');
-                } else if (gameType === 'othello') {
-                    if (typeof Othello !== 'undefined') Othello.start('online-join');
-                } else {
-                    if (typeof TicTacToe !== 'undefined') TicTacToe.start('online-join');
+                setTimeout(() => this.hostGame(gameType), 2000);
+            } else {
+                if (statusEl) {
+                    statusEl.innerHTML = `❌ Connection error: ${err.type}`;
+                    statusEl.style.color = '#ef4444';
                 }
-            }, 500);
+            }
         });
         
-        // Connection timeout
         if (this.connectionTimeout) clearTimeout(this.connectionTimeout);
         this.connectionTimeout = setTimeout(() => {
             if (!this.conn && statusEl) {
@@ -187,7 +179,7 @@ getRoomCodeElement: function() {
 
     joinGame: function(gameType = 'ttt') {
         this.activeOnlineGame = gameType;
-        const prefix = gameType === 'c4' ? 'c4-' : '';
+        const prefix = gameType === 'c4' ? 'c4-' : (gameType === 'othello' ? 'o-' : '');
         const code = document.getElementById(`${prefix}join-code-input`).value.toUpperCase().trim();
         const statusEl = this.getStatusElement();
         
@@ -203,7 +195,6 @@ getRoomCodeElement: function() {
         
         this.initPeer();
         
-        // Give peer time to initialize
         setTimeout(() => {
             console.log('Attempting to connect to:', code);
             this.conn = this.peer.connect(code, {
@@ -223,6 +214,8 @@ getRoomCodeElement: function() {
                 setTimeout(() => {
                     if (gameType === 'c4') {
                         if (typeof Connect4 !== 'undefined') Connect4.start('online-join');
+                    } else if (gameType === 'othello') {
+                        if (typeof Othello !== 'undefined') Othello.start('online-join');
                     } else {
                         if (typeof TicTacToe !== 'undefined') TicTacToe.start('online-join');
                     }
@@ -246,7 +239,6 @@ getRoomCodeElement: function() {
             });
         }, 1000);
         
-        // Timeout if connection takes too long
         setTimeout(() => {
             if (!this.conn.open && statusEl) {
                 statusEl.innerHTML += '<br><small>⚠️ Can\'t connect? Host may be behind firewall</small>';
