@@ -7,9 +7,9 @@ const Connect4 = {
     isGameActive: false,
     myOnlineSymbol: 1,
     winningCells: [],
-    isProcessingMove: false, // Locks UI during AI turn
+    isProcessingMove: false,
 
-    // --- INIT (called by App when switching to this view) ---
+    // ---------- INIT ----------
     init: function() {
         this.board = Array(this.ROWS).fill(null).map(() => Array(this.COLS).fill(0));
         this.currentPlayer = 1;
@@ -22,36 +22,36 @@ const Connect4 = {
         document.getElementById('c4-online-menu').classList.add('hidden');
     },
 
-    // --- START ---
+    // ---------- START ----------
     start: function(mode) {
         this.gameMode = mode;
         this.isProcessingMove = false;
         document.getElementById('c4-online-menu').classList.add('hidden');
-        this.resetBoard(true); // true = fromRemote, prevent broadcast on init
+        this.resetBoard(true);
 
         if (mode === 'online-host') {
-            this.myOnlineSymbol = 1; // Red
+            this.myOnlineSymbol = 1;
             document.getElementById('c4-status-text').innerText = "You are Red (Host). Waiting for opponent...";
             document.getElementById('c4-status-text').style.color = 'var(--text)';
         } else if (mode === 'online-join') {
-            this.myOnlineSymbol = 2; // Yellow
+            this.myOnlineSymbol = 2;
             document.getElementById('c4-status-text').innerText = "You are Yellow (Joiner). Waiting for host to start...";
             document.getElementById('c4-status-text').style.color = 'var(--text)';
         } else {
-            this.myOnlineSymbol = 1; // not used
+            this.myOnlineSymbol = 1;
             let modeText = mode.replace('ai-', 'vs AI (').replace('local', 'Local 2-Player') + (mode.includes('ai') ? ')' : '');
             document.getElementById('c4-status-text').innerText = `Mode: ${modeText} | Red's Turn`;
             document.getElementById('c4-status-text').style.color = 'var(--text)';
         }
     },
 
-    // --- ONLINE MENU ---
+    // ---------- ONLINE MENU ----------
     showOnlineMenu: function() {
         document.getElementById('c4-online-menu').classList.remove('hidden');
         document.getElementById('c4-status-text').innerText = "Online Multiplayer Setup";
     },
 
-    // --- RESET ---
+    // ---------- RESET ----------
     resetBoard: function(fromRemote = false) {
         this.board = Array(this.ROWS).fill(null).map(() => Array(this.COLS).fill(0));
         this.currentPlayer = 1;
@@ -71,20 +71,19 @@ const Connect4 = {
             }
         }
 
-        // Broadcast restart only if NOT triggered by remote
         if (!fromRemote && this.gameMode.includes('online')) {
             App.broadcastRestart();
         }
     },
 
-    // --- CLEANUP (called when switching away) ---
+    // ---------- CLEANUP ----------
     cleanup: function() {
         this.isGameActive = false;
         this.isProcessingMove = false;
-        // Do NOT close the global connection – it's managed by App
+        // Do NOT close the global connection
     },
 
-    // --- RENDER BOARD ---
+    // ---------- RENDER ----------
     renderBoard: function() {
         const boardEl = document.getElementById('c4-board');
         boardEl.innerHTML = '';
@@ -103,76 +102,71 @@ const Connect4 = {
         }
     },
 
-    // --- COLUMN CLICK HANDLER ---
+    // ---------- CLICK HANDLER ----------
     handleColumnClick: function(col) {
-        // LOCK: prevent clicks while processing (AI or other)
-        if (this.isProcessingMove) return;
+        // ---- VALIDITY CHECKS (no lock yet) ----
         if (!this.isGameActive) return;
         if (this.gameMode.includes('online') && this.currentPlayer !== this.myOnlineSymbol) return;
         if (this.board[0][col] !== 0) return; // column full
 
-        // Lock immediately to block rapid clicks
-        this.isProcessingMove = true;
-
-        // Perform the move
-        this.makeMove(col, this.currentPlayer, true);
-
-        // Note: the lock is released inside makeMove when AI is triggered,
-        // or if the move doesn't trigger AI, we unlock.
-        // We'll handle that inside makeMove.
-    },
-
-    // --- MAKE MOVE ---
-    makeMove: function(col, player, shouldBroadcast) {
-        // Extra safety: if already processing, ignore
-        if (this.isProcessingMove && player === 1) { // player 1 is human; player 2 is AI
-            return;
+        // ---- LOCK ONLY FOR AI MODES ----
+        if (this.gameMode.startsWith('ai')) {
+            // If already locked, ignore (shouldn't happen, but safety)
+            if (this.isProcessingMove) return;
+            this.isProcessingMove = true;
         }
 
+        // ---- EXECUTE THE MOVE ----
+        this.makeMove(col, this.currentPlayer, true);
+    },
+
+    // ---------- MAKE MOVE ----------
+    makeMove: function(col, player, shouldBroadcast) {
         // Find lowest empty row
         let row = this.ROWS - 1;
         while (row >= 0 && this.board[row][col] !== 0) {
             row--;
         }
+        // Guard against column full (should not happen)
         if (row < 0) {
-            // Column full – should not happen if guard checks are in place
-            this.isProcessingMove = false;
+            this.releaseLock();
             return;
         }
 
+        // Place piece
         this.board[row][col] = player;
         this.renderBoard();
 
+        // Broadcast if needed
         if (shouldBroadcast && this.gameMode.includes('online')) {
             App.broadcastMove({ type: 'move', col: col, player: player });
         }
 
-        // Check win
+        // ---- CHECK WIN / DRAW ----
         const winInfo = this.checkWin(this.board, player);
         if (winInfo) {
             this.isGameActive = false;
-            this.isProcessingMove = false;
             this.winningCells = winInfo;
             this.renderBoard();
             const winnerName = player === 1 ? "Red" : "Yellow";
             document.getElementById('c4-status-text').innerText = `🎉 ${winnerName} Wins!`;
             document.getElementById('c4-status-text').style.color = player === 1 ? '#ef4444' : '#eab308';
+            this.releaseLock();
             return;
         }
 
-        // Check draw
         if (this.board[0].every(cell => cell !== 0)) {
             this.isGameActive = false;
-            this.isProcessingMove = false;
             document.getElementById('c4-status-text').innerText = `🤝 It's a Draw!`;
             document.getElementById('c4-status-text').style.color = '#fbbf24';
+            this.releaseLock();
             return;
         }
 
-        // Switch player
+        // ---- SWITCH PLAYER ----
         this.currentPlayer = this.currentPlayer === 1 ? 2 : 1;
 
-        // Update status
+        // ---- UPDATE STATUS ----
         if (!this.gameMode.includes('online')) {
             document.getElementById('c4-status-text').innerText = this.currentPlayer === 1 ? "Red's Turn" : "Yellow's Turn";
             document.getElementById('c4-status-text').style.color = 'var(--text)';
@@ -186,30 +180,22 @@ const Connect4 = {
             }
         }
 
-        // Unlock if it's not AI's turn (i.e., local 2-player or online)
-        if (!this.gameMode.startsWith('ai')) {
-            this.isProcessingMove = false;
-        }
-
-        // AI TURN
+        // ---- AI TURN TRIGGER ----
         if (this.gameMode.startsWith('ai') && this.currentPlayer === 2 && this.isGameActive) {
-            // Lock is already true; schedule AI move
+            // Lock remains true, schedule AI move
             setTimeout(() => {
                 this.makeAIMove();
             }, 600);
         } else {
-            // If no AI trigger, unlock (happens when currentPlayer is 1 after AI move)
-            if (this.gameMode.startsWith('ai') && this.currentPlayer === 1) {
-                this.isProcessingMove = false;
-            }
+            // If AI not triggered, release lock (for human turns or online)
+            this.releaseLock();
         }
     },
 
-    // --- AI MOVE ---
+    // ---------- AI MOVE ----------
     makeAIMove: function() {
-        // Safety: if game ended or not AI mode, unlock and return
         if (!this.isGameActive || !this.gameMode.startsWith('ai')) {
-            this.isProcessingMove = false;
+            this.releaseLock();
             return;
         }
 
@@ -222,19 +208,31 @@ const Connect4 = {
             col = this.getBestMinimaxCol();
         }
 
-        // Unlock before calling makeMove (but makeMove will re-lock if needed)
-        this.isProcessingMove = false;
+        // Release lock before the AI move so that makeMove can re‑lock if needed
+        // (but we don't want re‑lock because AI is not human)
+        // Actually we don't want the UI locked during AI move; we unlock before.
+        // But we must prevent double‑clicks during AI delay – that's already handled
+        // because we keep the lock until AI starts moving.
+        // However, once AI starts moving, we can release so that after AI moves,
+        // the player can click.
+        // We'll release before calling makeMove, and makeMove will only lock for human moves.
+        this.isProcessingMove = false; // allow player to click after AI move
 
         if (col !== -1) {
+            // AI move is not broadcast
             this.makeMove(col, 2, false);
         } else {
-            // No valid column? Unlock anyway.
-            this.isProcessingMove = false;
+            // No valid move – shouldn't happen, but unlock anyway
+            this.releaseLock();
         }
     },
 
-    // --- HELPER FUNCTIONS (unchanged logic, but kept consistent) ---
+    // ---------- LOCK HELPER ----------
+    releaseLock: function() {
+        this.isProcessingMove = false;
+    },
 
+    // ---------- AI HELPERS (unchanged) ----------
     getValidCols: function(board) {
         const cols = [];
         for (let c = 0; c < this.COLS; c++) {
@@ -250,19 +248,16 @@ const Connect4 = {
 
     getSmartCol: function() {
         const valid = this.getValidCols(this.board);
-        // 1. Check for winning move
         for (let c of valid) {
             const tempBoard = this.board.map(row => [...row]);
             this.dropPiece(tempBoard, c, 2);
             if (this.checkWin(tempBoard, 2)) return c;
         }
-        // 2. Block opponent winning move
         for (let c of valid) {
             const tempBoard = this.board.map(row => [...row]);
             this.dropPiece(tempBoard, c, 1);
             if (this.checkWin(tempBoard, 1)) return c;
         }
-        // 3. Prefer center, else random
         if (valid.includes(3)) return 3;
         return valid.length > 0 ? valid[Math.floor(Math.random() * valid.length)] : -1;
     },
@@ -278,7 +273,6 @@ const Connect4 = {
     },
 
     checkWin: function(board, piece) {
-        // Horizontal
         for (let r = 0; r < this.ROWS; r++) {
             for (let c = 0; c < this.COLS - 3; c++) {
                 if (board[r][c] === piece && board[r][c+1] === piece && board[r][c+2] === piece && board[r][c+3] === piece) {
@@ -286,7 +280,6 @@ const Connect4 = {
                 }
             }
         }
-        // Vertical
         for (let r = 0; r < this.ROWS - 3; r++) {
             for (let c = 0; c < this.COLS; c++) {
                 if (board[r][c] === piece && board[r+1][c] === piece && board[r+2][c] === piece && board[r+3][c] === piece) {
@@ -294,7 +287,6 @@ const Connect4 = {
                 }
             }
         }
-        // Diagonal /
         for (let r = 3; r < this.ROWS; r++) {
             for (let c = 0; c < this.COLS - 3; c++) {
                 if (board[r][c] === piece && board[r-1][c+1] === piece && board[r-2][c+2] === piece && board[r-3][c+3] === piece) {
@@ -302,7 +294,6 @@ const Connect4 = {
                 }
             }
         }
-        // Diagonal \
         for (let r = 0; r < this.ROWS - 3; r++) {
             for (let c = 0; c < this.COLS - 3; c++) {
                 if (board[r][c] === piece && board[r+1][c+1] === piece && board[r+2][c+2] === piece && board[r+3][c+3] === piece) {
@@ -313,7 +304,7 @@ const Connect4 = {
         return null;
     },
 
-    // --- MINIMAX WITH ALPHA-BETA (Depth 4) ---
+    // ---------- MINIMAX (unchanged) ----------
     getBestMinimaxCol: function() {
         const tempBoard = this.board.map(row => [...row]);
         const valid = this.getValidCols(tempBoard);
@@ -339,7 +330,6 @@ const Connect4 = {
         if (isMaximizing) {
             let maxEval = -Infinity;
             let bestCol = validCols[Math.floor(Math.random() * validCols.length)];
-            // Order columns: center first for better pruning
             validCols.sort((a, b) => Math.abs(a - 3) - Math.abs(b - 3));
 
             for (let col of validCols) {
@@ -376,13 +366,10 @@ const Connect4 = {
 
     evaluateBoard: function(board, piece) {
         let score = 0;
-        // Center column preference
         const centerArray = [];
         for (let r = 0; r < this.ROWS; r++) centerArray.push(board[r][3]);
         const centerCount = centerArray.filter(x => x === piece).length;
         score += centerCount * 3;
-
-        // Additional basic heuristics could be added, but keep it simple.
         return score;
     }
 };
