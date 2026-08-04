@@ -12,9 +12,6 @@ const App = {
             if (this.currentGame === 'tictactoe' && typeof TicTacToe !== 'undefined') {
                 TicTacToe.cleanup();
             }
-            if (this.currentGame === 'barricade' && typeof Barricade !== 'undefined') {
-                Barricade.cleanup();
-            }
             if (this.currentGame === 'connect4' && typeof Connect4 !== 'undefined') {
                 Connect4.cleanup();
             }
@@ -34,9 +31,6 @@ const App = {
             if (viewId === 'game-ttt') {
                 this.currentGame = 'tictactoe';
                 if (typeof TicTacToe !== 'undefined') TicTacToe.init();
-            } else if (viewId === 'game-barricade') {
-                this.currentGame = 'barricade';
-                if (typeof Barricade !== 'undefined') Barricade.init();
             } else if (viewId === 'game-c4') {
                 this.currentGame = 'connect4';
                 if (typeof Connect4 !== 'undefined') Connect4.init();
