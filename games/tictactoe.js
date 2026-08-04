@@ -7,7 +7,6 @@ const TicTacToe = {
     isProcessingMove: false,
 
     init: function() {
-        console.log('TicTacToe.init() called');
         this.board = Array(9).fill(null);
         this.currentPlayer = 'X';
         this.isGameActive = false;
@@ -20,7 +19,6 @@ const TicTacToe = {
     },
 
     start: function(mode) {
-        console.log('TicTacToe.start() called with mode:', mode);
         this.gameMode = mode;
         this.isProcessingMove = false;
         document.getElementById('online-menu').classList.add('hidden');
@@ -49,7 +47,6 @@ const TicTacToe = {
     },
 
     resetBoard: function(fromRemote = false) {
-        console.log('resetBoard called, fromRemote:', fromRemote, 'gameMode:', this.gameMode);
         this.board = Array(9).fill(null);
         this.currentPlayer = 'X';
         this.isGameActive = true;
@@ -73,16 +70,14 @@ const TicTacToe = {
     },
 
     cleanup: function() {
-        console.log('TicTacToe.cleanup() called');
         this.isGameActive = false;
         this.isProcessingMove = false;
     },
 
     renderBoard: function() {
-        console.log('renderBoard called, isGameActive:', this.isGameActive);
         const boardEl = document.getElementById('board');
         if (!boardEl) {
-            console.error('Board element not found!');
+            console.error('Board element missing!');
             return;
         }
         boardEl.innerHTML = '';
@@ -90,38 +85,24 @@ const TicTacToe = {
             const cellEl = document.createElement('div');
             cellEl.className = `cell ${cell ? cell.toLowerCase() : ''}`;
             cellEl.innerText = cell || '';
-            cellEl.onclick = () => this.handleCellClick(index);
+            // Use addEventListener for reliable click handling
+            cellEl.addEventListener('click', () => {
+                this.handleCellClick(index);
+            });
             boardEl.appendChild(cellEl);
         });
-        console.log('Board rendered, number of cells:', boardEl.children.length);
     },
 
     handleCellClick: function(index) {
-        console.log('Cell clicked:', index, 'isGameActive:', this.isGameActive, 'board[index]:', this.board[index]);
-        if (this.isProcessingMove) {
-            console.log('Blocked by isProcessingMove');
-            return;
-        }
-        if (!this.isGameActive || this.board[index]) {
-            console.log('Game not active or cell occupied');
-            return;
-        }
-        if (this.gameMode.includes('online') && this.currentPlayer !== this.myOnlineSymbol) {
-            console.log('Not your turn in online mode');
-            return;
-        }
+        if (this.isProcessingMove) return;
+        if (!this.isGameActive || this.board[index]) return;
+        if (this.gameMode.includes('online') && this.currentPlayer !== this.myOnlineSymbol) return;
 
         this.isProcessingMove = true;
         this.makeMove(index, this.currentPlayer, true);
     },
 
     makeMove: function(index, player, shouldBroadcast) {
-        console.log('makeMove called', index, player, shouldBroadcast);
-        if (this.isProcessingMove && player === 'X') {
-            this.isProcessingMove = false;
-            return;
-        }
-
         this.board[index] = player;
         this.renderBoard();
 
@@ -176,7 +157,6 @@ const TicTacToe = {
     },
 
     makeAIMove: function() {
-        console.log('makeAIMove called');
         if (!this.isGameActive || !this.gameMode.startsWith('ai')) {
             this.isProcessingMove = false;
             return;
@@ -192,7 +172,6 @@ const TicTacToe = {
         }
 
         this.isProcessingMove = false;
-
         if (move !== -1) {
             this.makeMove(move, 'O', false);
         } else {
