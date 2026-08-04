@@ -192,3 +192,37 @@ input {
     margin: 10px 0;
 }
 
+/* --- OTHELLO SPECIFIC STYLES --- */
+.o-board {
+    display: grid;
+    gap: 4px;
+    max-width: 100%;
+    margin: 0 auto;
+    background: #1e3a5f;
+    padding: 12px;
+    border-radius: 12px;
+    box-shadow: 0 8px 16px rgba(0,0,0,0.4);
+}
+
+.o-cell {
+    aspect-ratio: 1;
+    background: #2e7d32;
+    border-radius: 50%;
+    cursor: pointer;
+    transition: background 0.2s;
+    border: 2px solid #1b5e20;
+}
+
+.o-cell:hover {
+    background: #388e3c;
+}
+
+.o-cell.black {
+    background: radial-gradient(circle at 35% 35%, #444, #000);
+    box-shadow: inset 0 4px 8px rgba(0,0,0,0.6);
+}
+
+.o-cell.white {
+    background: radial-gradient(circle at 35% 35%, #fff, #ccc);
+    box-shadow: inset 0 4px 8px rgba(255,255,255,0.4);
+}
