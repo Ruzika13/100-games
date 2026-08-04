@@ -6,6 +6,7 @@ const TicTacToe = {
     myOnlineSymbol: 'X',
     isProcessingMove: false,
 
+    // ---------- INIT ----------
     init: function() {
         this.board = Array(9).fill(null);
         this.currentPlayer = 'X';
@@ -18,6 +19,7 @@ const TicTacToe = {
         document.getElementById('online-menu').classList.add('hidden');
     },
 
+    // ---------- START ----------
     start: function(mode) {
         this.gameMode = mode;
         this.isProcessingMove = false;
@@ -41,11 +43,13 @@ const TicTacToe = {
         }
     },
 
+    // ---------- ONLINE MENU ----------
     showOnlineMenu: function() {
         document.getElementById('online-menu').classList.remove('hidden');
         document.getElementById('status-text').innerText = "Online Multiplayer Setup";
     },
 
+    // ---------- RESET ----------
     resetBoard: function(fromRemote = false) {
         this.board = Array(9).fill(null);
         this.currentPlayer = 'X';
@@ -69,11 +73,13 @@ const TicTacToe = {
         }
     },
 
+    // ---------- CLEANUP ----------
     cleanup: function() {
         this.isGameActive = false;
         this.isProcessingMove = false;
     },
 
+    // ---------- RENDER BOARD (Fixed with addEventListener) ----------
     renderBoard: function() {
         const boardEl = document.getElementById('board');
         if (!boardEl) {
@@ -81,18 +87,22 @@ const TicTacToe = {
             return;
         }
         boardEl.innerHTML = '';
-        this.board.forEach((cell, index) => {
+        for (let i = 0; i < 9; i++) {
+            const cell = this.board[i];
             const cellEl = document.createElement('div');
             cellEl.className = `cell ${cell ? cell.toLowerCase() : ''}`;
             cellEl.innerText = cell || '';
-            // Use addEventListener for reliable click handling
-            cellEl.addEventListener('click', () => {
-                this.handleCellClick(index);
-            });
+            // Use addEventListener for robust click handling
+            cellEl.addEventListener('click', (function(index) {
+                return function() {
+                    this.handleCellClick(index);
+                };
+            })(i).bind(this));
             boardEl.appendChild(cellEl);
-        });
+        }
     },
 
+    // ---------- CLICK HANDLER ----------
     handleCellClick: function(index) {
         if (this.isProcessingMove) return;
         if (!this.isGameActive || this.board[index]) return;
@@ -102,6 +112,7 @@ const TicTacToe = {
         this.makeMove(index, this.currentPlayer, true);
     },
 
+    // ---------- MAKE MOVE ----------
     makeMove: function(index, player, shouldBroadcast) {
         this.board[index] = player;
         this.renderBoard();
@@ -156,6 +167,7 @@ const TicTacToe = {
         }
     },
 
+    // ---------- AI MOVE ----------
     makeAIMove: function() {
         if (!this.isGameActive || !this.gameMode.startsWith('ai')) {
             this.isProcessingMove = false;
@@ -179,6 +191,7 @@ const TicTacToe = {
         }
     },
 
+    // ---------- AI HELPERS ----------
     getRandomMove: function() {
         const available = this.board.map((v, i) => v === null ? i : null).filter(v => v !== null);
         return available.length > 0 ? available[Math.floor(Math.random() * available.length)] : -1;
@@ -249,6 +262,7 @@ const TicTacToe = {
         }
     },
 
+    // ---------- WIN CHECK ----------
     checkWin: function(player) {
         const wins = [
             [0,1,2], [3,4,5], [6,7,8],
