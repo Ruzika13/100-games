@@ -255,9 +255,9 @@ const App = {
                 }
             } else if (data.type === 'restart') {
                 if (gameType === 'c4') {
-                    if (typeof Connect4 !== 'undefined') Connect4.resetBoard();
+                    if (typeof Connect4 !== 'undefined') Connect4.resetBoard(true);
                 } else {
-                    if (typeof TicTacToe !== 'undefined') TicTacToe.resetBoard();
+                    if (typeof TicTacToe !== 'undefined') TicTacToe.resetBoard(true);
                 }
             }
         });
