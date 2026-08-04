@@ -15,6 +15,10 @@ const App = {
             if (this.currentGame === 'connect4' && typeof Connect4 !== 'undefined') {
                 Connect4.cleanup();
             }
+            if (this.currentGame === 'othello' && typeof Othello !== 'undefined') {
+                Othello.cleanup();
+            }
+
         } catch (e) {
             console.error('Cleanup error:', e);
         }
@@ -34,6 +38,9 @@ const App = {
             } else if (viewId === 'game-c4') {
                 this.currentGame = 'connect4';
                 if (typeof Connect4 !== 'undefined') Connect4.init();
+            } else if (viewId === 'game-othello') {
+                this.currentGame = 'othello';
+                if (typeof Othello !== 'undefined') Othello.init();
             }
         } catch (e) {
             console.error('Game init error:', e);
@@ -77,14 +84,15 @@ const App = {
     },
 
     getStatusElement: function() {
-        const prefix = this.activeOnlineGame === 'c4' ? 'c4-' : '';
-        return document.getElementById(`${prefix}online-status`);
-    },
-
-    getRoomCodeElement: function() {
-        const prefix = this.activeOnlineGame === 'c4' ? 'c4-' : '';
-        return document.getElementById(`${prefix}room-code-display`);
-    },
+    const prefix = this.activeOnlineGame === 'c4' ? 'c4-' :
+                   this.activeOnlineGame === 'othello' ? 'o-' : '';
+    return document.getElementById(`${prefix}online-status`);
+},
+getRoomCodeElement: function() {
+    const prefix = this.activeOnlineGame === 'c4' ? 'c4-' :
+                   this.activeOnlineGame === 'othello' ? 'o-' : '';
+    return document.getElementById(`${prefix}room-code-display`);
+}
 
     hostGame: function(gameType = 'ttt') {
         this.activeOnlineGame = gameType;
@@ -143,6 +151,8 @@ const App = {
                     if (typeof Connect4 !== 'undefined') Connect4.start('online-host');
                 } else {
                     if (typeof TicTacToe !== 'undefined') TicTacToe.start('online-host');
+                } else if (gameType === 'othello') {
+                    if (typeof Othello !== 'undefined') Othello.start('online-host');
                 }
             }, 500);
         });
@@ -155,13 +165,15 @@ const App = {
                     statusEl.style.color = '#ef4444';
                 }
                 // Auto-retry with new code
-                setTimeout(() => this.hostGame(gameType), 2000);
-            } else {
-                if (statusEl) {
-                    statusEl.innerHTML = `❌ Connection error: ${err.type}`;
-                    statusEl.style.color = '#ef4444';
+              setTimeout(() => {
+                if (gameType === 'c4') {
+                    if (typeof Connect4 !== 'undefined') Connect4.start('online-join');
+                } else if (gameType === 'othello') {
+                    if (typeof Othello !== 'undefined') Othello.start('online-join');
+                } else {
+                    if (typeof TicTacToe !== 'undefined') TicTacToe.start('online-join');
                 }
-            }
+            }, 500);
         });
         
         // Connection timeout
@@ -250,12 +262,16 @@ const App = {
             if (data.type === 'move') {
                 if (gameType === 'c4') {
                     if (typeof Connect4 !== 'undefined') Connect4.makeMove(data.col, data.player, false);
+                } else if (gameType === 'othello') {
+                    if (typeof Othello !== 'undefined') Othello.makeMove(data.row, data.col, data.player, false);
                 } else {
                     if (typeof TicTacToe !== 'undefined') TicTacToe.makeMove(data.index, data.player, false);
                 }
             } else if (data.type === 'restart') {
                 if (gameType === 'c4') {
                     if (typeof Connect4 !== 'undefined') Connect4.resetBoard(true);
+                } else if (gameType === 'othello') {
+                    if (typeof Othello !== 'undefined') Othello.resetBoard(true);
                 } else {
                     if (typeof TicTacToe !== 'undefined') TicTacToe.resetBoard(true);
                 }
