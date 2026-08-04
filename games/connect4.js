@@ -1,74 +1,76 @@
-const TicTacToe = {
-    board: Array(9).fill(null),
-    currentPlayer: 'X',
+const Connect4 = {
+    ROWS: 6,
+    COLS: 7,
+    board: [],
+    currentPlayer: 1, // 1 = Red, 2 = Yellow
     gameMode: 'local',
     isGameActive: false,
-    myOnlineSymbol: 'X',
-    isProcessingMove: false, // locks UI during AI turn
+    myOnlineSymbol: 1,
+    winningCells: [],
+    isProcessingMove: false,
 
     // ---------- INIT ----------
     init: function() {
-        this.board = Array(9).fill(null);
-        this.currentPlayer = 'X';
+        this.board = Array(this.ROWS).fill(null).map(() => Array(this.COLS).fill(0));
+        this.currentPlayer = 1;
         this.isGameActive = false;
         this.isProcessingMove = false;
-        this.gameMode = '';
+        this.winningCells = [];
         this.renderBoard();
-        document.getElementById('status-text').innerText = "Choose a mode to start";
-        document.getElementById('status-text').style.color = 'var(--text)';
-        document.getElementById('online-menu').classList.add('hidden');
+        document.getElementById('c4-status-text').innerText = "Choose a mode to start";
+        document.getElementById('c4-status-text').style.color = 'var(--text)';
+        document.getElementById('c4-online-menu').classList.add('hidden');
     },
 
     // ---------- START ----------
     start: function(mode) {
         this.gameMode = mode;
         this.isProcessingMove = false;
-        document.getElementById('online-menu').classList.add('hidden');
+        document.getElementById('c4-online-menu').classList.add('hidden');
         this.resetBoard(true);
 
         if (mode === 'online-host') {
-            this.myOnlineSymbol = 'X';
-            document.getElementById('status-text').innerText = "You are X (Host). Waiting for opponent...";
-            document.getElementById('status-text').style.color = 'var(--text)';
+            this.myOnlineSymbol = 1;
+            document.getElementById('c4-status-text').innerText = "You are Red (Host). Waiting for opponent...";
+            document.getElementById('c4-status-text').style.color = 'var(--text)';
         } else if (mode === 'online-join') {
-            this.myOnlineSymbol = 'O';
-            document.getElementById('status-text').innerText = "You are O (Joiner). Waiting for host to start...";
-            document.getElementById('status-text').style.color = 'var(--text)';
+            this.myOnlineSymbol = 2;
+            document.getElementById('c4-status-text').innerText = "You are Yellow (Joiner). Waiting for host to start...";
+            document.getElementById('c4-status-text').style.color = 'var(--text)';
         } else {
-            this.myOnlineSymbol = 'X'; // not used for non‑online
-            let modeText = mode.replace('ai-', 'vs AI (').replace('local', 'Local 2-Player');
-            if (mode.includes('ai')) modeText += ')';
-            document.getElementById('status-text').innerText = `Mode: ${modeText} | Player X's Turn`;
-            document.getElementById('status-text').style.color = 'var(--text)';
+            this.myOnlineSymbol = 1;
+            let modeText = mode.replace('ai-', 'vs AI (').replace('local', 'Local 2-Player') + (mode.includes('ai') ? ')' : '');
+            document.getElementById('c4-status-text').innerText = `Mode: ${modeText} | Red's Turn`;
+            document.getElementById('c4-status-text').style.color = 'var(--text)';
         }
     },
 
     // ---------- ONLINE MENU ----------
     showOnlineMenu: function() {
-        document.getElementById('online-menu').classList.remove('hidden');
-        document.getElementById('status-text').innerText = "Online Multiplayer Setup";
+        document.getElementById('c4-online-menu').classList.remove('hidden');
+        document.getElementById('c4-status-text').innerText = "Online Multiplayer Setup";
     },
 
     // ---------- RESET ----------
     resetBoard: function(fromRemote = false) {
-        this.board = Array(9).fill(null);
-        this.currentPlayer = 'X';
+        this.board = Array(this.ROWS).fill(null).map(() => Array(this.COLS).fill(0));
+        this.currentPlayer = 1;
         this.isGameActive = true;
         this.isProcessingMove = false;
+        this.winningCells = [];
         this.renderBoard();
 
         if (!this.gameMode.includes('online')) {
-            document.getElementById('status-text').innerText = `Player ${this.currentPlayer}'s Turn`;
-            document.getElementById('status-text').style.color = 'var(--text)';
+            document.getElementById('c4-status-text').innerText = "Red's Turn";
+            document.getElementById('c4-status-text').style.color = 'var(--text)';
         } else {
-            if (this.gameMode === 'online-host' && this.myOnlineSymbol === 'X') {
-                document.getElementById('status-text').innerText = "Your Turn (X)";
-            } else if (this.gameMode === 'online-join' && this.myOnlineSymbol === 'O') {
-                document.getElementById('status-text').innerText = "Waiting for host (X)...";
+            if (this.gameMode === 'online-host' && this.myOnlineSymbol === 1) {
+                document.getElementById('c4-status-text').innerText = "Your Turn (Red)";
+            } else if (this.gameMode === 'online-join' && this.myOnlineSymbol === 2) {
+                document.getElementById('c4-status-text').innerText = "Waiting for host (Red)...";
             }
         }
 
-        // Only broadcast if NOT triggered by the remote side
         if (!fromRemote && this.gameMode.includes('online')) {
             App.broadcastRestart();
         }
@@ -78,213 +80,296 @@ const TicTacToe = {
     cleanup: function() {
         this.isGameActive = false;
         this.isProcessingMove = false;
-        // DO NOT close the global connection – it's managed by App
+        // Do NOT close the global connection
     },
 
     // ---------- RENDER ----------
     renderBoard: function() {
-        const boardEl = document.getElementById('board');
+        const boardEl = document.getElementById('c4-board');
         boardEl.innerHTML = '';
-        this.board.forEach((cell, index) => {
-            const cellEl = document.createElement('div');
-            cellEl.className = `cell ${cell ? cell.toLowerCase() : ''}`;
-            cellEl.innerText = cell || '';
-            cellEl.onclick = () => this.handleCellClick(index);
-            boardEl.appendChild(cellEl);
-        });
+        for (let r = 0; r < this.ROWS; r++) {
+            for (let c = 0; c < this.COLS; c++) {
+                const cell = document.createElement('div');
+                cell.className = 'c4-cell';
+                if (this.board[r][c] === 1) cell.classList.add('red');
+                if (this.board[r][c] === 2) cell.classList.add('yellow');
+                if (this.winningCells.some(wc => wc.r === r && wc.c === c)) {
+                    cell.classList.add('win');
+                }
+                cell.onclick = () => this.handleColumnClick(c);
+                boardEl.appendChild(cell);
+            }
+        }
     },
 
     // ---------- CLICK HANDLER ----------
-    handleCellClick: function(index) {
-        // Prevent clicks while AI is thinking
-        if (this.isProcessingMove) return;
-        if (!this.isGameActive || this.board[index]) return;
+    handleColumnClick: function(col) {
+        // ---- VALIDITY CHECKS (no lock yet) ----
+        if (!this.isGameActive) return;
         if (this.gameMode.includes('online') && this.currentPlayer !== this.myOnlineSymbol) return;
+        if (this.board[0][col] !== 0) return; // column full
 
-        // Lock immediately
-        this.isProcessingMove = true;
-        this.makeMove(index, this.currentPlayer, true);
+        // ---- LOCK ONLY FOR AI MODES ----
+        if (this.gameMode.startsWith('ai')) {
+            // If already locked, ignore (shouldn't happen, but safety)
+            if (this.isProcessingMove) return;
+            this.isProcessingMove = true;
+        }
+
+        // ---- EXECUTE THE MOVE ----
+        this.makeMove(col, this.currentPlayer, true);
     },
 
     // ---------- MAKE MOVE ----------
-    makeMove: function(index, player, shouldBroadcast) {
-        // Extra safety: if processing, don't allow a second move from the same player
-        if (this.isProcessingMove && player === 'X') {
-            this.isProcessingMove = false;
+    makeMove: function(col, player, shouldBroadcast) {
+        // Find lowest empty row
+        let row = this.ROWS - 1;
+        while (row >= 0 && this.board[row][col] !== 0) {
+            row--;
+        }
+        // Guard against column full (should not happen)
+        if (row < 0) {
+            this.releaseLock();
             return;
         }
 
-        // Place the piece
-        this.board[index] = player;
+        // Place piece
+        this.board[row][col] = player;
         this.renderBoard();
 
-        // Broadcast if online and this is the local player's move
+        // Broadcast if needed
         if (shouldBroadcast && this.gameMode.includes('online')) {
-            App.broadcastMove({ type: 'move', index: index, player: player });
+            App.broadcastMove({ type: 'move', col: col, player: player });
         }
 
-        // Check win
-        if (this.checkWin(player)) {
+        // ---- CHECK WIN / DRAW ----
+        const winInfo = this.checkWin(this.board, player);
+        if (winInfo) {
             this.isGameActive = false;
-            this.isProcessingMove = false;
-            document.getElementById('status-text').innerText = `🎉 Player ${player} Wins!`;
-            document.getElementById('status-text').style.color = 'var(--win)';
+            this.winningCells = winInfo;
+            this.renderBoard();
+            const winnerName = player === 1 ? "Red" : "Yellow";
+            document.getElementById('c4-status-text').innerText = `🎉 ${winnerName} Wins!`;
+            document.getElementById('c4-status-text').style.color = player === 1 ? '#ef4444' : '#eab308';
+            this.releaseLock();
             return;
         }
 
-        // Check draw
-        if (this.board.every(cell => cell !== null)) {
+        if (this.board[0].every(cell => cell !== 0)) {
             this.isGameActive = false;
-            this.isProcessingMove = false;
-            document.getElementById('status-text').innerText = `🤝 It's a Draw!`;
-            document.getElementById('status-text').style.color = '#fbbf24';
+            document.getElementById('c4-status-text').innerText = `🤝 It's a Draw!`;
+            document.getElementById('c4-status-text').style.color = '#fbbf24';
+            this.releaseLock();
             return;
         }
 
-        // Switch player
-        this.currentPlayer = this.currentPlayer === 'X' ? 'O' : 'X';
+        // ---- SWITCH PLAYER ----
+        this.currentPlayer = this.currentPlayer === 1 ? 2 : 1;
 
-        // Update status
+        // ---- UPDATE STATUS ----
         if (!this.gameMode.includes('online')) {
-            document.getElementById('status-text').innerText = `Player ${this.currentPlayer}'s Turn`;
-            document.getElementById('status-text').style.color = 'var(--text)';
+            document.getElementById('c4-status-text').innerText = this.currentPlayer === 1 ? "Red's Turn" : "Yellow's Turn";
+            document.getElementById('c4-status-text').style.color = 'var(--text)';
         } else {
             if (this.currentPlayer === this.myOnlineSymbol) {
-                document.getElementById('status-text').innerText = "Your Turn!";
-                document.getElementById('status-text').style.color = 'var(--text)';
+                document.getElementById('c4-status-text').innerText = "Your Turn!";
+                document.getElementById('c4-status-text').style.color = 'var(--text)';
             } else {
-                document.getElementById('status-text').innerText = "Opponent's Turn...";
-                document.getElementById('status-text').style.color = '#94a3b8';
+                document.getElementById('c4-status-text').innerText = "Opponent's Turn...";
+                document.getElementById('c4-status-text').style.color = '#94a3b8';
             }
         }
 
-        // Unlock if it's not AI's turn (local/online)
-        if (!this.gameMode.startsWith('ai')) {
-            this.isProcessingMove = false;
-        }
-
-        // AI TURN
-        if (this.gameMode.startsWith('ai') && this.currentPlayer === 'O' && this.isGameActive) {
-            // Lock is already true; schedule AI move
+        // ---- AI TURN TRIGGER ----
+        if (this.gameMode.startsWith('ai') && this.currentPlayer === 2 && this.isGameActive) {
+            // Lock remains true, schedule AI move
             setTimeout(() => {
                 this.makeAIMove();
-            }, 500);
+            }, 600);
         } else {
-            // If no AI trigger, unlock (e.g., after AI move, currentPlayer became X)
-            if (this.gameMode.startsWith('ai') && this.currentPlayer === 'X') {
-                this.isProcessingMove = false;
-            }
+            // If AI not triggered, release lock (for human turns or online)
+            this.releaseLock();
         }
     },
 
     // ---------- AI MOVE ----------
     makeAIMove: function() {
-        // Safety: if game ended or not AI mode, unlock and return
         if (!this.isGameActive || !this.gameMode.startsWith('ai')) {
-            this.isProcessingMove = false;
+            this.releaseLock();
             return;
         }
 
-        let move;
+        let col;
         if (this.gameMode === 'ai-easy') {
-            move = this.getRandomMove();
+            col = this.getRandomValidCol();
         } else if (this.gameMode === 'ai-hard') {
-            move = this.getSmartMove();
+            col = this.getSmartCol();
         } else {
-            move = this.getBestMove(); // minimax
+            col = this.getBestMinimaxCol();
         }
 
-        // Unlock before calling makeMove (so player can click after AI)
+        // Release lock before the AI move so that makeMove can re‑lock if needed
+        // (but we don't want re‑lock because AI is not human)
+        // Actually we don't want the UI locked during AI move; we unlock before.
+        // But we must prevent double‑clicks during AI delay – that's already handled
+        // because we keep the lock until AI starts moving.
+        // However, once AI starts moving, we can release so that after AI moves,
+        // the player can click.
+        // We'll release before calling makeMove, and makeMove will only lock for human moves.
+        this.isProcessingMove = false; // allow player to click after AI move
+
+        if (col !== -1) {
+            // AI move is not broadcast
+            this.makeMove(col, 2, false);
+        } else {
+            // No valid move – shouldn't happen, but unlock anyway
+            this.releaseLock();
+        }
+    },
+
+    // ---------- LOCK HELPER ----------
+    releaseLock: function() {
         this.isProcessingMove = false;
+    },
 
-        if (move !== -1) {
-            this.makeMove(move, 'O', false);
-        } else {
-            this.isProcessingMove = false;
+    // ---------- AI HELPERS (unchanged) ----------
+    getValidCols: function(board) {
+        const cols = [];
+        for (let c = 0; c < this.COLS; c++) {
+            if (board[0][c] === 0) cols.push(c);
         }
+        return cols;
     },
 
-    // ---------- AI HELPERS ----------
-    getRandomMove: function() {
-        const available = this.board.map((v, i) => v === null ? i : null).filter(v => v !== null);
-        return available.length > 0 ? available[Math.floor(Math.random() * available.length)] : -1;
+    getRandomValidCol: function() {
+        const valid = this.getValidCols(this.board);
+        return valid.length > 0 ? valid[Math.floor(Math.random() * valid.length)] : -1;
     },
 
-    getSmartMove: function() {
-        // Win immediately
-        for (let i = 0; i < 9; i++) {
-            if (!this.board[i]) {
-                this.board[i] = 'O';
-                if (this.checkWin('O')) { this.board[i] = null; return i; }
-                this.board[i] = null;
+    getSmartCol: function() {
+        const valid = this.getValidCols(this.board);
+        for (let c of valid) {
+            const tempBoard = this.board.map(row => [...row]);
+            this.dropPiece(tempBoard, c, 2);
+            if (this.checkWin(tempBoard, 2)) return c;
+        }
+        for (let c of valid) {
+            const tempBoard = this.board.map(row => [...row]);
+            this.dropPiece(tempBoard, c, 1);
+            if (this.checkWin(tempBoard, 1)) return c;
+        }
+        if (valid.includes(3)) return 3;
+        return valid.length > 0 ? valid[Math.floor(Math.random() * valid.length)] : -1;
+    },
+
+    dropPiece: function(board, col, piece) {
+        for (let r = this.ROWS - 1; r >= 0; r--) {
+            if (board[r][col] === 0) {
+                board[r][col] = piece;
+                return r;
             }
         }
-        // Block opponent
-        for (let i = 0; i < 9; i++) {
-            if (!this.board[i]) {
-                this.board[i] = 'X';
-                if (this.checkWin('X')) { this.board[i] = null; return i; }
-                this.board[i] = null;
-            }
-        }
-        // Fallback to random
-        return this.getRandomMove();
+        return -1;
     },
 
-    getBestMove: function() {
-        let bestScore = -Infinity;
-        let bestMove = -1;
-        for (let i = 0; i < 9; i++) {
-            if (!this.board[i]) {
-                this.board[i] = 'O';
-                let score = this.minimax(this.board, 0, false);
-                this.board[i] = null;
-                if (score > bestScore) {
-                    bestScore = score;
-                    bestMove = i;
+    checkWin: function(board, piece) {
+        for (let r = 0; r < this.ROWS; r++) {
+            for (let c = 0; c < this.COLS - 3; c++) {
+                if (board[r][c] === piece && board[r][c+1] === piece && board[r][c+2] === piece && board[r][c+3] === piece) {
+                    return [{r,c}, {r,c:c+1}, {r,c:c+2}, {r,c:c+3}];
                 }
             }
         }
-        return bestMove;
+        for (let r = 0; r < this.ROWS - 3; r++) {
+            for (let c = 0; c < this.COLS; c++) {
+                if (board[r][c] === piece && board[r+1][c] === piece && board[r+2][c] === piece && board[r+3][c] === piece) {
+                    return [{r,c}, {r:r+1,c}, {r:r+2,c}, {r:r+3,c}];
+                }
+            }
+        }
+        for (let r = 3; r < this.ROWS; r++) {
+            for (let c = 0; c < this.COLS - 3; c++) {
+                if (board[r][c] === piece && board[r-1][c+1] === piece && board[r-2][c+2] === piece && board[r-3][c+3] === piece) {
+                    return [{r,c}, {r:r-1,c:c+1}, {r:r-2,c:c+2}, {r:r-3,c:c+3}];
+                }
+            }
+        }
+        for (let r = 0; r < this.ROWS - 3; r++) {
+            for (let c = 0; c < this.COLS - 3; c++) {
+                if (board[r][c] === piece && board[r+1][c+1] === piece && board[r+2][c+2] === piece && board[r+3][c+3] === piece) {
+                    return [{r,c}, {r:r+1,c:c+1}, {r:r+2,c:c+2}, {r:r+3,c:c+3}];
+                }
+            }
+        }
+        return null;
     },
 
-    minimax: function(boardState, depth, isMaximizing) {
-        if (this.checkWin('O')) return 10 - depth;
-        if (this.checkWin('X')) return -10 + depth;
-        if (boardState.every(cell => cell !== null)) return 0;
+    // ---------- MINIMAX (unchanged) ----------
+    getBestMinimaxCol: function() {
+        const tempBoard = this.board.map(row => [...row]);
+        const valid = this.getValidCols(tempBoard);
+        if (valid.length === 0) return -1;
+        const [col] = this.minimax(tempBoard, 4, -Infinity, Infinity, true);
+        return col !== -1 ? col : valid[0];
+    },
+
+    minimax: function(board, depth, alpha, beta, isMaximizing) {
+        const validCols = this.getValidCols(board);
+        const isTerminal = this.checkWin(board, 1) || this.checkWin(board, 2) || validCols.length === 0;
+
+        if (depth === 0 || isTerminal) {
+            if (isTerminal) {
+                if (this.checkWin(board, 2)) return [-1, 1000000];
+                if (this.checkWin(board, 1)) return [-1, -1000000];
+                return [-1, 0];
+            } else {
+                return [-1, this.evaluateBoard(board, 2)];
+            }
+        }
 
         if (isMaximizing) {
-            let bestScore = -Infinity;
-            for (let i = 0; i < 9; i++) {
-                if (!boardState[i]) {
-                    boardState[i] = 'O';
-                    let score = this.minimax(boardState, depth + 1, false);
-                    boardState[i] = null;
-                    bestScore = Math.max(score, bestScore);
+            let maxEval = -Infinity;
+            let bestCol = validCols[Math.floor(Math.random() * validCols.length)];
+            validCols.sort((a, b) => Math.abs(a - 3) - Math.abs(b - 3));
+
+            for (let col of validCols) {
+                const tempBoard = board.map(row => [...row]);
+                this.dropPiece(tempBoard, col, 2);
+                const [, evalScore] = this.minimax(tempBoard, depth - 1, alpha, beta, false);
+                if (evalScore > maxEval) {
+                    maxEval = evalScore;
+                    bestCol = col;
                 }
+                alpha = Math.max(alpha, evalScore);
+                if (beta <= alpha) break;
             }
-            return bestScore;
+            return [bestCol, maxEval];
         } else {
-            let bestScore = Infinity;
-            for (let i = 0; i < 9; i++) {
-                if (!boardState[i]) {
-                    boardState[i] = 'X';
-                    let score = this.minimax(boardState, depth + 1, true);
-                    boardState[i] = null;
-                    bestScore = Math.min(score, bestScore);
+            let minEval = Infinity;
+            let bestCol = validCols[Math.floor(Math.random() * validCols.length)];
+            validCols.sort((a, b) => Math.abs(a - 3) - Math.abs(b - 3));
+
+            for (let col of validCols) {
+                const tempBoard = board.map(row => [...row]);
+                this.dropPiece(tempBoard, col, 1);
+                const [, evalScore] = this.minimax(tempBoard, depth - 1, alpha, beta, true);
+                if (evalScore < minEval) {
+                    minEval = evalScore;
+                    bestCol = col;
                 }
+                beta = Math.min(beta, evalScore);
+                if (beta <= alpha) break;
             }
-            return bestScore;
+            return [bestCol, minEval];
         }
     },
 
-    // ---------- WIN CHECK ----------
-    checkWin: function(player) {
-        const wins = [
-            [0,1,2], [3,4,5], [6,7,8],
-            [0,3,6], [1,4,7], [2,5,8],
-            [0,4,8], [2,4,6]
-        ];
-        return wins.some(combo => combo.every(i => this.board[i] === player));
+    evaluateBoard: function(board, piece) {
+        let score = 0;
+        const centerArray = [];
+        for (let r = 0; r < this.ROWS; r++) centerArray.push(board[r][3]);
+        const centerCount = centerArray.filter(x => x === piece).length;
+        score += centerCount * 3;
+        return score;
     }
 };
