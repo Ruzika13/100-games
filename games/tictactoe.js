@@ -8,11 +8,23 @@ const TicTacToe = {
     start: function(mode) {
         this.gameMode = mode;
         document.getElementById('online-menu').classList.add('hidden');
-        this.resetBoard();
-        
-        let modeText = mode.replace('ai-', 'vs AI (').replace('local', 'Local 2-Player').replace('online-', 'Online (') + (mode.includes('ai') || mode.includes('online') ? ')' : '');
-        document.getElementById('status-text').innerText = `Mode: ${modeText} | Player X's Turn`;
-        document.getElementById('status-text').style.color = 'var(--text)';
+        this.resetBoard(true); // true = fromRemote, prevents broadcast on init
+
+        // FIX: Set online symbols and status correctly
+        if (mode === 'online-host') {
+            this.myOnlineSymbol = 'X';
+            document.getElementById('status-text').innerText = "You are X (Host). Waiting for opponent...";
+            document.getElementById('status-text').style.color = 'var(--text)';
+        } else if (mode === 'online-join') {
+            this.myOnlineSymbol = 'O';
+            document.getElementById('status-text').innerText = "You are O (Joiner). Waiting for host to start...";
+            document.getElementById('status-text').style.color = 'var(--text)';
+        } else {
+            this.myOnlineSymbol = 'X'; // not used for non-online
+            let modeText = mode.replace('ai-', 'vs AI (').replace('local', 'Local 2-Player') + (mode.includes('ai') ? ')' : '');
+            document.getElementById('status-text').innerText = `Mode: ${modeText} | Player X's Turn`;
+            document.getElementById('status-text').style.color = 'var(--text)';
+        }
     },
 
     showOnlineMenu: function() {
@@ -20,23 +32,35 @@ const TicTacToe = {
         document.getElementById('status-text').innerText = "Online Multiplayer Setup";
     },
 
-    resetBoard: function() {
+    // FIX: Added fromRemote parameter to prevent broadcast loop
+    resetBoard: function(fromRemote = false) {
         this.board = Array(9).fill(null);
         this.currentPlayer = 'X';
         this.isGameActive = true;
         this.renderBoard();
-        
-        if (this.gameMode.includes('online-join')) {
-            document.getElementById('status-text').innerText = "Waiting for Host (X) to start...";
-        } else {
+
+        // Only update status if not online or if online, show appropriate message
+        if (!this.gameMode.includes('online')) {
             document.getElementById('status-text').innerText = `Player ${this.currentPlayer}'s Turn`;
+            document.getElementById('status-text').style.color = 'var(--text)';
+        } else {
+            if (this.gameMode === 'online-host' && this.myOnlineSymbol === 'X') {
+                document.getElementById('status-text').innerText = "Your Turn (X)";
+            } else if (this.gameMode === 'online-join' && this.myOnlineSymbol === 'O') {
+                document.getElementById('status-text').innerText = "Waiting for host (X)...";
+            }
         }
-        App.broadcastRestart();
+
+        // Broadcast restart only if not triggered by remote
+        if (!fromRemote && this.gameMode.includes('online')) {
+            App.broadcastRestart();
+        }
     },
 
     cleanup: function() {
         this.isGameActive = false;
-        if (App.conn) App.conn.close();
+        // FIX: Do NOT close the global connection here – it's managed by App
+        // if (App.conn) App.conn.close();
     },
 
     renderBoard: function() {
@@ -55,18 +79,19 @@ const TicTacToe = {
         if (!this.isGameActive || this.board[index]) return;
 
         if (this.gameMode.includes('online') && this.currentPlayer !== this.myOnlineSymbol) {
-            return; 
+            return;
         }
 
         this.makeMove(index, this.currentPlayer, true);
     },
 
+    // FIX: Broadcast move as a single payload object
     makeMove: function(index, player, shouldBroadcast) {
         this.board[index] = player;
         this.renderBoard();
 
         if (shouldBroadcast && this.gameMode.includes('online')) {
-            App.broadcastMove(index, player);
+            App.broadcastMove({ type: 'move', index: index, player: player });
         }
 
         if (this.checkWin(player)) {
@@ -84,20 +109,28 @@ const TicTacToe = {
         }
 
         this.currentPlayer = this.currentPlayer === 'X' ? 'O' : 'X';
-        
+
         if (!this.gameMode.includes('online')) {
             document.getElementById('status-text').innerText = `Player ${this.currentPlayer}'s Turn`;
             document.getElementById('status-text').style.color = 'var(--text)';
         } else {
-            document.getElementById('status-text').innerText = this.currentPlayer === this.myOnlineSymbol ? "Your Turn!" : "Opponent's Turn...";
+            // Online status update
+            if (this.currentPlayer === this.myOnlineSymbol) {
+                document.getElementById('status-text').innerText = "Your Turn!";
+                document.getElementById('status-text').style.color = 'var(--text)';
+            } else {
+                document.getElementById('status-text').innerText = "Opponent's Turn...";
+                document.getElementById('status-text').style.color = '#94a3b8';
+            }
         }
 
+        // AI move if applicable
         if (this.gameMode.startsWith('ai') && this.currentPlayer === 'O' && this.isGameActive) {
             setTimeout(() => this.makeAIMove(), 500);
         }
     },
 
-    // --- AI LOGIC ---
+    // --- AI LOGIC (unchanged) ---
     makeAIMove: function() {
         let move;
         if (this.gameMode === 'ai-easy') {
@@ -107,7 +140,6 @@ const TicTacToe = {
         } else {
             move = this.getBestMove(); // Minimax
         }
-        
         if (move !== -1) {
             this.makeMove(move, 'O', false);
         }
