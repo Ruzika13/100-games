@@ -4,13 +4,14 @@ const TicTacToe = {
     gameMode: 'local',
     isGameActive: false,
     myOnlineSymbol: 'X',
+    isProcessingMove: false, // NEW: locks UI during AI move
 
     start: function(mode) {
         this.gameMode = mode;
+        this.isProcessingMove = false; // reset flag
         document.getElementById('online-menu').classList.add('hidden');
         this.resetBoard(true); // true = fromRemote, prevents broadcast on init
 
-        // FIX: Set online symbols and status correctly
         if (mode === 'online-host') {
             this.myOnlineSymbol = 'X';
             document.getElementById('status-text').innerText = "You are X (Host). Waiting for opponent...";
@@ -20,7 +21,7 @@ const TicTacToe = {
             document.getElementById('status-text').innerText = "You are O (Joiner). Waiting for host to start...";
             document.getElementById('status-text').style.color = 'var(--text)';
         } else {
-            this.myOnlineSymbol = 'X'; // not used for non-online
+            this.myOnlineSymbol = 'X';
             let modeText = mode.replace('ai-', 'vs AI (').replace('local', 'Local 2-Player') + (mode.includes('ai') ? ')' : '');
             document.getElementById('status-text').innerText = `Mode: ${modeText} | Player X's Turn`;
             document.getElementById('status-text').style.color = 'var(--text)';
@@ -32,14 +33,13 @@ const TicTacToe = {
         document.getElementById('status-text').innerText = "Online Multiplayer Setup";
     },
 
-    // FIX: Added fromRemote parameter to prevent broadcast loop
     resetBoard: function(fromRemote = false) {
         this.board = Array(9).fill(null);
         this.currentPlayer = 'X';
         this.isGameActive = true;
+        this.isProcessingMove = false; // reset lock
         this.renderBoard();
 
-        // Only update status if not online or if online, show appropriate message
         if (!this.gameMode.includes('online')) {
             document.getElementById('status-text').innerText = `Player ${this.currentPlayer}'s Turn`;
             document.getElementById('status-text').style.color = 'var(--text)';
@@ -51,7 +51,6 @@ const TicTacToe = {
             }
         }
 
-        // Broadcast restart only if not triggered by remote
         if (!fromRemote && this.gameMode.includes('online')) {
             App.broadcastRestart();
         }
@@ -59,8 +58,8 @@ const TicTacToe = {
 
     cleanup: function() {
         this.isGameActive = false;
-        // FIX: Do NOT close the global connection here – it's managed by App
-        // if (App.conn) App.conn.close();
+        this.isProcessingMove = false;
+        // Do NOT close global connection
     },
 
     renderBoard: function() {
@@ -76,6 +75,8 @@ const TicTacToe = {
     },
 
     handleCellClick: function(index) {
+        // LOCK: prevent clicks while AI is thinking
+        if (this.isProcessingMove) return;
         if (!this.isGameActive || this.board[index]) return;
 
         if (this.gameMode.includes('online') && this.currentPlayer !== this.myOnlineSymbol) {
@@ -85,7 +86,6 @@ const TicTacToe = {
         this.makeMove(index, this.currentPlayer, true);
     },
 
-    // FIX: Broadcast move as a single payload object
     makeMove: function(index, player, shouldBroadcast) {
         this.board[index] = player;
         this.renderBoard();
@@ -96,6 +96,7 @@ const TicTacToe = {
 
         if (this.checkWin(player)) {
             this.isGameActive = false;
+            this.isProcessingMove = false; // unlock just in case
             document.getElementById('status-text').innerText = `🎉 Player ${player} Wins!`;
             document.getElementById('status-text').style.color = 'var(--win)';
             return;
@@ -103,6 +104,7 @@ const TicTacToe = {
 
         if (this.board.every(cell => cell !== null)) {
             this.isGameActive = false;
+            this.isProcessingMove = false;
             document.getElementById('status-text').innerText = `🤝 It's a Draw!`;
             document.getElementById('status-text').style.color = '#fbbf24';
             return;
@@ -114,7 +116,6 @@ const TicTacToe = {
             document.getElementById('status-text').innerText = `Player ${this.currentPlayer}'s Turn`;
             document.getElementById('status-text').style.color = 'var(--text)';
         } else {
-            // Online status update
             if (this.currentPlayer === this.myOnlineSymbol) {
                 document.getElementById('status-text').innerText = "Your Turn!";
                 document.getElementById('status-text').style.color = 'var(--text)';
@@ -124,14 +125,23 @@ const TicTacToe = {
             }
         }
 
-        // AI move if applicable
+        // ----- AI TURN -----
         if (this.gameMode.startsWith('ai') && this.currentPlayer === 'O' && this.isGameActive) {
-            setTimeout(() => this.makeAIMove(), 500);
+            // LOCK the board
+            this.isProcessingMove = true;
+            setTimeout(() => {
+                this.makeAIMove();
+            }, 500);
         }
     },
 
-    // --- AI LOGIC (unchanged) ---
     makeAIMove: function() {
+        // Ensure we're still in a valid state
+        if (!this.isGameActive || this.gameMode !== 'ai-easy' && this.gameMode !== 'ai-hard' && this.gameMode !== 'ai-extreme') {
+            this.isProcessingMove = false;
+            return;
+        }
+
         let move;
         if (this.gameMode === 'ai-easy') {
             move = this.getRandomMove();
@@ -140,11 +150,25 @@ const TicTacToe = {
         } else {
             move = this.getBestMove(); // Minimax
         }
+
+        // Unlock before making the move (so subsequent clicks work)
+        this.isProcessingMove = false;
+
         if (move !== -1) {
+            // Make the move – this will handle win/draw and turn updates
+            // but we must NOT re‑trigger the AI again (so pass shouldBroadcast = false)
+            // and we need to avoid re‑locking.
+            // The makeMove function will see that it's AI turn again if we don't guard,
+            // but we already set currentPlayer to 'O', so after this move, currentPlayer becomes 'X',
+            // so no recursive AI call.
             this.makeMove(move, 'O', false);
+        } else {
+            // No legal move? Should not happen, but unlock anyway.
+            this.isProcessingMove = false;
         }
     },
 
+    // --- AI helper functions (unchanged) ---
     getRandomMove: function() {
         const available = this.board.map((v, i) => v === null ? i : null).filter(v => v !== null);
         return available[Math.floor(Math.random() * available.length)];
