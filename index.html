@@ -35,16 +35,14 @@
     </div>
 
     <div class="game-card">
-    <div>
-        <h3>Othello (Reversi)</h3>
-        <p style="color: #94a3b8; font-size: 14px;">Flip discs with strategy. Play vs AI (3 difficulties), Local, or Online via Room Code.</p>
+        <div>
+            <h3>Othello (Reversi)</h3>
+            <p style="color: #94a3b8; font-size: 14px;">Flip discs with strategy. Play vs AI (3 difficulties), Local, or Online via Room Code.</p>
+        </div>
+        <button class="btn" onclick="App.showView('game-othello')">Play Now</button>
     </div>
-    <button class="btn" onclick="App.showView('game-othello')">Play Now</button>
-</div>
 </div>
 
-
-    
 <!-- TIC-TAC-TOE VIEW -->
 <div id="game-ttt" class="view">
     <button class="btn btn-secondary" onclick="App.showView('hub-view')" style="margin-bottom: 20px;">← Back to Hub</button>
@@ -112,7 +110,6 @@
 <!-- OTHELLO VIEW -->
 <div id="game-othello" class="view">
     <button class="btn btn-secondary" onclick="App.showView('hub-view')" style="margin-bottom: 20px;">← Back to Hub</button>
-    
     <div style="margin-bottom: 15px; text-align: center;">
         <span style="margin-right: 10px; color: #94a3b8;">Board Size:</span>
         <button class="btn btn-secondary" onclick="Othello.setBoardSize(8)">8×8</button>
@@ -120,7 +117,6 @@
         <button class="btn btn-secondary" onclick="Othello.setBoardSize(12)">12×12</button>
         <span id="o-size-display" style="margin-left: 10px; color: var(--accent);">(8×8)</span>
     </div>
-
     <div class="mode-select" id="o-modes">
         <button class="btn" onclick="Othello.start('ai-easy')">vs AI (Easy)</button>
         <button class="btn" onclick="Othello.start('ai-hard')">vs AI (Hard)</button>
@@ -154,6 +150,7 @@
 <script src="games/tictactoe.js"></script>
 <script src="games/connect4.js"></script>
 <script src="games/othello.js"></script>
+<!-- REMOVED the duplicate tictactoe_v2.js script -->
 
 </body>
 </html>
