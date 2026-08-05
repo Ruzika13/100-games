@@ -52,11 +52,10 @@ const App = {
             } else if (viewId === 'game-checkers') {
                 this.currentGame = 'checkers';
                 if (typeof Checkers !== 'undefined') Checkers.init();
+            } else if (viewId === 'game-gomoku') {
+                this.currentGame = 'gomoku';
+                if (typeof Gomoku !== 'undefined') Gomoku.init();
             }
-else if (viewId === 'game-gomoku') {
-    this.currentGame = 'gomoku';
-    if (typeof Gomoku !== 'undefined') Gomoku.init();
-}
         } catch (e) {
             console.error('Game init error:', e);
         }
@@ -73,7 +72,6 @@ else if (viewId === 'game-gomoku') {
                     { urls: 'stun:stun.l.google.com:19302' },
                     { urls: 'stun:stun1.l.google.com:19302' },
                     { urls: 'stun:stun2.l.google.com:19302' },
-                    // Free TURN servers from Metered.ca
                     {
                         urls: 'turn:openrelay.metered.ca:80',
                         username: 'openrelayproject',
@@ -221,7 +219,7 @@ else if (viewId === 'game-gomoku') {
             }
         });
 
-        // Connection timeout (increased to 20s)
+        // Connection timeout (20s)
         if (this.connectionTimeout) clearTimeout(this.connectionTimeout);
         this.connectionTimeout = setTimeout(() => {
             if (!this.conn && statusEl) {
@@ -240,7 +238,6 @@ else if (viewId === 'game-gomoku') {
                        gameType === 'checkers' ? 'checkers-' :
                        gameType === 'gomoku' ? 'gomoku-' : '';
 
-            
         const codeInput = document.getElementById(`${prefix}join-code-input`);
         if (!codeInput) {
             console.error('Join code input not found for prefix:', prefix);
@@ -311,7 +308,7 @@ else if (viewId === 'game-gomoku') {
             });
         }, 1000);
 
-        // Timeout warning (increased to 20s)
+        // Timeout warning (20s)
         setTimeout(() => {
             if (!this.conn || !this.conn.open) {
                 if (statusEl) {
@@ -340,20 +337,23 @@ else if (viewId === 'game-gomoku') {
                     }
                 } else if (gameType === 'checkers') {
                     if (typeof Checkers !== 'undefined') {
-            // Checkers move has fromRow, fromCol, toRow, toCol, player
+                        // Checkers: set selection and execute
                         Checkers.selectedRow = data.fromRow;
                         Checkers.selectedCol = data.fromCol;
                         Checkers.validMoves = [{ row: data.toRow, col: data.toCol, isJump: data.isJump || false }];
-                    if (data.isJump) {
-                        Checkers.executeJump(data.toRow, data.toCol);
-                    } else {
-                        Checkers.executeMove(data.toRow, data.toCol);
+                        if (data.isJump) {
+                            Checkers.executeJump(data.toRow, data.toCol);
+                        } else {
+                            Checkers.executeMove(data.toRow, data.toCol);
                         }
                     }
                 } else if (gameType === 'gomoku') {
-                    if (typeof Gomoku !== 'undefined') Gomoku.makeMove(data.row, data.col, data.player, false);
+                    if (typeof Gomoku !== 'undefined') {
+                        Gomoku.makeMove(data.row, data.col, data.player, false);
+                    }
                 } else {
-                    if (typeof TicTacToe !== 'undefined') TicTacToe.makeMove(data.index, data.player, false);               
+                    if (typeof TicTacToe !== 'undefined') {
+                        TicTacToe.makeMove(data.index, data.player, false);
                     }
                 }
             } else if (data.type === 'restart') {
