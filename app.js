@@ -20,6 +20,12 @@ const App = {
             if (this.currentGame === 'othello' && typeof Othello !== 'undefined') {
                 Othello.cleanup();
             }
+            if (this.currentGame === 'checkers' && typeof Checkers !== 'undefined') {
+                Checkers.cleanup();
+            }
+            if (this.currentGame === 'gomoku' && typeof Gomoku !== 'undefined') {
+                Gomoku.cleanup();
+            }
         } catch (e) {
             console.error('Cleanup error:', e);
         }
@@ -43,7 +49,14 @@ const App = {
             } else if (viewId === 'game-othello') {
                 this.currentGame = 'othello';
                 if (typeof Othello !== 'undefined') Othello.init();
+            } else if (viewId === 'game-checkers') {
+                this.currentGame = 'checkers';
+                if (typeof Checkers !== 'undefined') Checkers.init();
             }
+else if (viewId === 'game-gomoku') {
+    this.currentGame = 'gomoku';
+    if (typeof Gomoku !== 'undefined') Gomoku.init();
+}
         } catch (e) {
             console.error('Game init error:', e);
         }
@@ -99,13 +112,17 @@ const App = {
     // ---------- UI HELPERS ----------
     getStatusElement: function() {
         const prefix = this.activeOnlineGame === 'c4' ? 'c4-' :
-                       this.activeOnlineGame === 'othello' ? 'o-' : '';
+                       this.activeOnlineGame === 'othello' ? 'o-' :
+                       this.activeOnlineGame === 'checkers' ? 'checkers-' :
+                       this.activeOnlineGame === 'gomoku' ? 'gomoku-' : '';
         return document.getElementById(`${prefix}online-status`);
     },
 
     getRoomCodeElement: function() {
         const prefix = this.activeOnlineGame === 'c4' ? 'c4-' :
-                       this.activeOnlineGame === 'othello' ? 'o-' : '';
+                       this.activeOnlineGame === 'othello' ? 'o-' :
+                       this.activeOnlineGame === 'checkers' ? 'checkers-' :
+                       this.activeOnlineGame === 'gomoku' ? 'gomoku-' : '';
         return document.getElementById(`${prefix}room-code-display`);
     },
 
@@ -177,6 +194,10 @@ const App = {
                     if (typeof Connect4 !== 'undefined') Connect4.start('online-host');
                 } else if (gameType === 'othello') {
                     if (typeof Othello !== 'undefined') Othello.start('online-host');
+                } else if (gameType === 'checkers') {
+                    if (typeof Checkers !== 'undefined') Checkers.start('online-host');
+                } else if (gameType === 'gomoku') {
+                    if (typeof Gomoku !== 'undefined') Gomoku.start('online-host');
                 } else {
                     if (typeof TicTacToe !== 'undefined') TicTacToe.start('online-host');
                 }
@@ -215,8 +236,11 @@ const App = {
 
         // Determine the correct prefix for element IDs
         const prefix = gameType === 'c4' ? 'c4-' :
-                       gameType === 'othello' ? 'o-' : '';
+                       gameType === 'othello' ? 'o-' :
+                       gameType === 'checkers' ? 'checkers-' :
+                       gameType === 'gomoku' ? 'gomoku-' : '';
 
+            
         const codeInput = document.getElementById(`${prefix}join-code-input`);
         if (!codeInput) {
             console.error('Join code input not found for prefix:', prefix);
@@ -260,6 +284,10 @@ const App = {
                         if (typeof Connect4 !== 'undefined') Connect4.start('online-join');
                     } else if (gameType === 'othello') {
                         if (typeof Othello !== 'undefined') Othello.start('online-join');
+                    } else if (gameType === 'checkers') {
+                        if (typeof Checkers !== 'undefined') Checkers.start('online-join');
+                    } else if (gameType === 'gomoku') {
+                        if (typeof Gomoku !== 'undefined') Gomoku.start('online-join');
                     } else {
                         if (typeof TicTacToe !== 'undefined') TicTacToe.start('online-join');
                     }
@@ -310,9 +338,22 @@ const App = {
                     if (typeof Othello !== 'undefined') {
                         Othello.makeMove(data.row, data.col, data.player, false);
                     }
+                } else if (gameType === 'checkers') {
+                    if (typeof Checkers !== 'undefined') {
+            // Checkers move has fromRow, fromCol, toRow, toCol, player
+                        Checkers.selectedRow = data.fromRow;
+                        Checkers.selectedCol = data.fromCol;
+                        Checkers.validMoves = [{ row: data.toRow, col: data.toCol, isJump: data.isJump || false }];
+                    if (data.isJump) {
+                        Checkers.executeJump(data.toRow, data.toCol);
+                    } else {
+                        Checkers.executeMove(data.toRow, data.toCol);
+                        }
+                    }
+                } else if (gameType === 'gomoku') {
+                    if (typeof Gomoku !== 'undefined') Gomoku.makeMove(data.row, data.col, data.player, false);
                 } else {
-                    if (typeof TicTacToe !== 'undefined') {
-                        TicTacToe.makeMove(data.index, data.player, false);
+                    if (typeof TicTacToe !== 'undefined') TicTacToe.makeMove(data.index, data.player, false);               
                     }
                 }
             } else if (data.type === 'restart') {
@@ -321,6 +362,10 @@ const App = {
                     if (typeof Connect4 !== 'undefined') Connect4.resetBoard(true);
                 } else if (gameType === 'othello') {
                     if (typeof Othello !== 'undefined') Othello.resetBoard(true);
+                } else if (gameType === 'checkers') {
+                    if (typeof Checkers !== 'undefined') Checkers.resetBoard(true);
+                } else if (gameType === 'gomoku') {
+                    if (typeof Gomoku !== 'undefined') Gomoku.resetBoard(true);
                 } else {
                     if (typeof TicTacToe !== 'undefined') TicTacToe.resetBoard(true);
                 }
