@@ -283,23 +283,18 @@ input {
     background: radial-gradient(circle at 40% 40%, #fff, #ccc);
 }
 
+.checkers-piece.king {
+    border: 3px solid #fbbf24;
+}
+
 .checkers-piece.king::after {
     content: '👑';
     position: absolute;
-    font-size: 50%;
+    font-size: 40%;
     top: 50%;
     left: 50%;
     transform: translate(-50%, -50%);
-    color: #fbbf24;
     text-shadow: 0 0 4px rgba(0,0,0,0.6);
-}
-
-.checkers-piece.black.king::after {
-    color: #fbbf24;
-}
-
-.checkers-piece.white.king::after {
-    color: #eab308;
 }
 
 /* --- GOMOKU SPECIFIC STYLES --- */
