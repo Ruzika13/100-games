@@ -49,7 +49,13 @@
         </div>
         <button class="btn" onclick="App.showView('game-checkers')">Play Now</button>
     </div>
-    
+    <div class="game-card">
+        <div>
+            <h3>Gomoku (Five‑in‑a‑Row)</h3>
+            <p style="color: #94a3b8; font-size: 14px;">Place stones to get 5 in a row. AI & Online multiplayer.</p>
+        </div>
+        <button class="btn" onclick="App.showView('game-gomoku')">Play Now</button>
+    </div>
 </div>
 
 <!-- TIC-TAC-TOE VIEW -->
@@ -153,6 +159,7 @@
     <div style="text-align: center; margin-top: 20px;">
         <button class="btn btn-secondary" onclick="Othello.resetBoard()">Restart Game</button>
     </div>
+    
     <!-- CHECKERS VIEW -->
 <div id="game-checkers" class="view">
     <button class="btn btn-secondary" onclick="App.showView('hub-view')" style="margin-bottom: 20px;">← Back to Hub</button>
@@ -183,6 +190,38 @@
         <button class="btn btn-secondary" onclick="Checkers.resetBoard()">Restart Game</button>
     </div>
 </div>
+    <!-- GOMOKU VIEW -->
+<div id="game-gomoku" class="view">
+    <button class="btn btn-secondary" onclick="App.showView('hub-view')" style="margin-bottom: 20px;">← Back to Hub</button>
+    <div class="mode-select" id="gomoku-modes">
+        <button class="btn" onclick="Gomoku.start('ai-easy')">vs AI (Easy)</button>
+        <button class="btn" onclick="Gomoku.start('ai-hard')">vs AI (Hard)</button>
+        <button class="btn" onclick="Gomoku.start('ai-extreme')">vs AI (Very Hard)</button>
+        <button class="btn" onclick="Gomoku.start('local')">Local 2-Player</button>
+        <button class="btn" onclick="Gomoku.showOnlineMenu()">Online Multiplayer</button>
+    </div>
+    <div id="gomoku-online-menu" class="online-panel hidden">
+        <h3>🌐 Online Multiplayer</h3>
+        <div id="gomoku-host-section">
+            <p>Host a game and share this code:</p>
+            <h2 id="gomoku-room-code-display" style="color: var(--accent); letter-spacing: 3px;">---</h2>
+            <button class="btn" onclick="App.hostGame('gomoku')">Generate Code & Host</button>
+        </div>
+        <div style="margin: 15px 0; color: #64748b;">- OR -</div>
+        <div id="gomoku-join-section">
+            <p>Enter room code to join:</p>
+            <input type="text" id="gomoku-join-code-input" maxlength="6" placeholder="ABC123">
+            <button class="btn" onclick="App.joinGame('gomoku')">Join</button>
+        </div>
+        <p id="gomoku-online-status" style="color: #fbbf24; margin-top: 10px;"></p>
+    </div>
+    <div class="status-bar" id="gomoku-status-text">Choose a mode to start</div>
+    <div class="gomoku-board" id="gomoku-board"></div>
+    <div style="text-align: center; margin-top: 20px;">
+        <button class="btn btn-secondary" onclick="Gomoku.resetBoard()">Restart Game</button>
+    </div>
+</div>
+
     
 </div>
 
