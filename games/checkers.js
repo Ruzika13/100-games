@@ -1,17 +1,16 @@
+// games/checkers.js – clean, no arrow functions
 const Checkers = {
     SIZE: 8,
     board: [],
-    currentPlayer: 1, // 1 = Black (Player 1), 2 = White (Player 2)
+    currentPlayer: 1, // 1 = Black, 2 = White
     gameMode: 'local',
     isGameActive: false,
-    myOnlineSymbol: 1,
     isProcessingMove: false,
     selectedRow: null,
     selectedCol: null,
     validMoves: [],
-    mandatoryJump: null, // { row, col } if a jump is mandatory
+    mandatoryJump: null,
 
-    // ---------- INIT ----------
     init: function() {
         this.board = [];
         this.currentPlayer = 1;
@@ -22,59 +21,52 @@ const Checkers = {
         this.validMoves = [];
         this.mandatoryJump = null;
         this.renderBoard();
-        document.getElementById('checkers-status-text').innerText = "Choose a mode to start";
-        document.getElementById('checkers-status-text').style.color = 'var(--text)';
-        document.getElementById('checkers-online-menu').classList.add('hidden');
+        var statusEl = document.getElementById('checkers-status-text');
+        if (statusEl) {
+            statusEl.innerText = 'Choose a mode to start';
+            statusEl.style.color = 'var(--text)';
+        }
+        var menuEl = document.getElementById('checkers-online-menu');
+        if (menuEl) menuEl.classList.add('hidden');
     },
 
-    // ---------- START ----------
     start: function(mode) {
         this.gameMode = mode;
         this.isProcessingMove = false;
-        document.getElementById('checkers-online-menu').classList.add('hidden');
-        this.resetBoard(true);
-
-        if (mode === 'online-host') {
-            this.myOnlineSymbol = 1; // Black
-            document.getElementById('checkers-status-text').innerText = "You are Black (Host). Waiting for opponent...";
-            document.getElementById('checkers-status-text').style.color = 'var(--text)';
-        } else if (mode === 'online-join') {
-            this.myOnlineSymbol = 2; // White
-            document.getElementById('checkers-status-text').innerText = "You are White (Joiner). Waiting for host to start...";
-            document.getElementById('checkers-status-text').style.color = 'var(--text)';
-        } else {
-            this.myOnlineSymbol = 1;
-            let modeText = mode.replace('ai-', 'vs AI (').replace('local', 'Local 2-Player') + (mode.includes('ai') ? ')' : '');
-            document.getElementById('checkers-status-text').innerText = `Mode: ${modeText} | Black's Turn`;
-            document.getElementById('checkers-status-text').style.color = 'var(--text)';
+        var menuEl = document.getElementById('checkers-online-menu');
+        if (menuEl) menuEl.classList.add('hidden');
+        this.resetBoard();
+        var statusEl = document.getElementById('checkers-status-text');
+        if (statusEl) {
+            var modeText = mode.replace('ai-', 'vs AI (').replace('local', 'Local 2-Player');
+            if (mode.includes('ai')) modeText += ')';
+            statusEl.innerText = 'Mode: ' + modeText + ' | Black\'s Turn';
+            statusEl.style.color = 'var(--text)';
         }
     },
 
-    // ---------- ONLINE MENU ----------
-    showOnlineMenu: function() {
-        document.getElementById('checkers-online-menu').classList.remove('hidden');
-        document.getElementById('checkers-status-text').innerText = "Online Multiplayer Setup";
-    },
-
-    // ---------- RESET ----------
-    resetBoard: function(fromRemote = false) {
-        this.board = Array(this.SIZE).fill(null).map(() => Array(this.SIZE).fill(0));
-        // Set up initial pieces
-        for (let r = 0; r < 3; r++) {
-            for (let c = 0; c < this.SIZE; c++) {
+    resetBoard: function() {
+        this.board = [];
+        for (var r = 0; r < this.SIZE; r++) {
+            this.board[r] = [];
+            for (var c = 0; c < this.SIZE; c++) {
+                this.board[r][c] = 0;
+            }
+        }
+        for (r = 0; r < 3; r++) {
+            for (c = 0; c < this.SIZE; c++) {
                 if ((r + c) % 2 === 1) {
-                    this.board[r][c] = 1; // Black (Player 1)
+                    this.board[r][c] = 1;
                 }
             }
         }
-        for (let r = 5; r < 8; r++) {
-            for (let c = 0; c < this.SIZE; c++) {
+        for (r = 5; r < 8; r++) {
+            for (c = 0; c < this.SIZE; c++) {
                 if ((r + c) % 2 === 1) {
-                    this.board[r][c] = 2; // White (Player 2)
+                    this.board[r][c] = 2;
                 }
             }
         }
-
         this.currentPlayer = 1;
         this.isGameActive = true;
         this.isProcessingMove = false;
@@ -83,97 +75,76 @@ const Checkers = {
         this.validMoves = [];
         this.mandatoryJump = null;
         this.renderBoard();
-
-        if (!this.gameMode.includes('online')) {
-            document.getElementById('checkers-status-text').innerText = "Black's Turn";
-            document.getElementById('checkers-status-text').style.color = 'var(--text)';
-        } else {
-            if (this.gameMode === 'online-host' && this.myOnlineSymbol === 1) {
-                document.getElementById('checkers-status-text').innerText = "Your Turn (Black)";
-            } else if (this.gameMode === 'online-join' && this.myOnlineSymbol === 2) {
-                document.getElementById('checkers-status-text').innerText = "Waiting for host (Black)...";
-            }
-        }
-
-        if (!fromRemote && this.gameMode.includes('online')) {
-            App.broadcastRestart();
+        var statusEl = document.getElementById('checkers-status-text');
+        if (statusEl) {
+            statusEl.innerText = 'Black\'s Turn';
+            statusEl.style.color = 'var(--text)';
         }
     },
 
-    // ---------- CLEANUP ----------
     cleanup: function() {
         this.isGameActive = false;
         this.isProcessingMove = false;
     },
 
-    // ---------- RENDER BOARD ----------
     renderBoard: function() {
-        const boardEl = document.getElementById('checkers-board');
+        var boardEl = document.getElementById('checkers-board');
+        if (!boardEl) return;
         boardEl.innerHTML = '';
-        boardEl.style.gridTemplateColumns = `repeat(${this.SIZE}, 1fr)`;
+        boardEl.style.gridTemplateColumns = 'repeat(' + this.SIZE + ', 1fr)';
 
-        for (let r = 0; r < this.SIZE; r++) {
-            for (let c = 0; c < this.SIZE; c++) {
-                const cell = document.createElement('div');
+        for (var r = 0; r < this.SIZE; r++) {
+            for (var c = 0; c < this.SIZE; c++) {
+                var cell = document.createElement('div');
                 cell.className = 'checkers-cell';
-                const isDark = (r + c) % 2 === 1;
-                if (isDark) cell.classList.add('dark');
-                else cell.classList.add('light');
-
-                const piece = this.board[r][c];
+                if ((r + c) % 2 === 1) {
+                    cell.classList.add('dark');
+                } else {
+                    cell.classList.add('light');
+                }
+                var piece = this.board[r][c];
                 if (piece !== 0) {
-                    const pieceEl = document.createElement('div');
-                    pieceEl.className = `checkers-piece ${piece === 1 ? 'black' : 'white'}`;
+                    var pieceEl = document.createElement('div');
+                    pieceEl.className = 'checkers-piece';
+                    if (piece === 1) pieceEl.classList.add('black');
+                    else if (piece === 2) pieceEl.classList.add('white');
                     if (this.isKing(r, c)) pieceEl.classList.add('king');
                     cell.appendChild(pieceEl);
                 }
-
-                // Highlight selected piece
                 if (this.selectedRow === r && this.selectedCol === c) {
                     cell.classList.add('selected');
                 }
-                // Highlight valid moves
-                if (this.validMoves.some(m => m.row === r && m.col === c)) {
+                if (this.validMoves.some(function(m) { return m.row === r && m.col === c; })) {
                     cell.classList.add('valid-move');
                 }
-
                 cell.dataset.row = r;
                 cell.dataset.col = c;
-                cell.addEventListener('click', () => this.handleCellClick(r, c));
+                cell.addEventListener('click', (function(row, col) {
+                    return function() {
+                        Checkers.handleCellClick(row, col);
+                    };
+                })(r, c));
                 boardEl.appendChild(cell);
             }
         }
     },
 
-    // ---------- CLICK HANDLER ----------
     handleCellClick: function(row, col) {
-        if (this.isProcessingMove) return;
-        if (!this.isGameActive) return;
-        if (this.gameMode.includes('online') && this.currentPlayer !== this.myOnlineSymbol) return;
+        if (this.isProcessingMove || !this.isGameActive) return;
+        if (this.gameMode.includes('online')) return; // skip online for now
 
-        const piece = this.board[row][col];
+        var piece = this.board[row][col];
 
-        // If a mandatory jump exists, force it
         if (this.mandatoryJump) {
-            const jump = this.mandatoryJump;
-            // If clicking on a valid jump destination, execute it
-            if (this.validMoves.some(m => m.row === row && m.col === col && m.isJump)) {
+            if (this.validMoves.some(function(m) { return m.row === row && m.col === col && m.isJump; })) {
                 this.executeJump(row, col);
                 return;
             }
-            // If clicking on the piece that must jump, re-select it
-            if (this.selectedRow === jump.row && this.selectedCol === jump.col) {
-                // already selected, do nothing
-                return;
-            }
-            // If clicking on another piece that also has a jump, we could allow re-selection
-            // but we'll keep it simple: must perform the mandatory jump.
             return;
         }
 
-        // If no piece selected, and we clicked a valid piece for current player
         if (this.selectedRow === null) {
-            if (piece === this.currentPlayer || (piece === this.currentPlayer + 2)) { // piece or king
+            if (this.isOwnPiece(row, col)) {
                 this.selectedRow = row;
                 this.selectedCol = col;
                 this.validMoves = this.getValidMoves(row, col);
@@ -182,9 +153,8 @@ const Checkers = {
             return;
         }
 
-        // If we have a selected piece and we click on a valid move destination
-        if (this.validMoves.some(m => m.row === row && m.col === col)) {
-            const move = this.validMoves.find(m => m.row === row && m.col === col);
+        if (this.validMoves.some(function(m) { return m.row === row && m.col === col; })) {
+            var move = this.validMoves.find(function(m) { return m.row === row && m.col === col; });
             if (move.isJump) {
                 this.executeJump(row, col);
             } else {
@@ -193,8 +163,7 @@ const Checkers = {
             return;
         }
 
-        // Click on another own piece – re-select
-        if (piece === this.currentPlayer || (piece === this.currentPlayer + 2)) {
+        if (this.isOwnPiece(row, col)) {
             this.selectedRow = row;
             this.selectedCol = col;
             this.validMoves = this.getValidMoves(row, col);
@@ -202,161 +171,37 @@ const Checkers = {
             return;
         }
 
-        // Click elsewhere – deselect
         this.selectedRow = null;
         this.selectedCol = null;
         this.validMoves = [];
         this.renderBoard();
     },
 
-    // ---------- MOVE EXECUTION ----------
-    executeMove: function(toRow, toCol) {
-        const fromRow = this.selectedRow;
-        const fromCol = this.selectedCol;
-        const player = this.board[fromRow][fromCol];
-        // Move piece
-        this.board[toRow][toCol] = player;
-        this.board[fromRow][fromCol] = 0;
-        // King promotion
-        this.promoteIfNeeded(toRow, toCol);
-
-        // Clear selection
-        this.selectedRow = null;
-        this.selectedCol = null;
-        this.validMoves = [];
-
-        // Broadcast move
-        if (this.gameMode.includes('online')) {
-            App.broadcastMove({
-                type: 'move',
-                fromRow: fromRow,
-                fromCol: fromCol,
-                toRow: toRow,
-                toCol: toCol,
-                player: player
-            });
-        }
-
-        this.endTurn();
+    isOwnPiece: function(row, col) {
+        var piece = this.board[row][col];
+        if (piece === 0) return false;
+        var player = (piece % 2 === 1) ? 1 : 2;
+        return player === this.currentPlayer;
     },
 
-    executeJump: function(toRow, toCol) {
-        const fromRow = this.selectedRow;
-        const fromCol = this.selectedCol;
-        const player = this.board[fromRow][fromCol];
-        const midRow = (fromRow + toRow) / 2;
-        const midCol = (fromCol + toCol) / 2;
-        const captured = this.board[midRow][midCol];
-        if (captured === 0) return; // should not happen
-
-        // Move piece
-        this.board[toRow][toCol] = player;
-        this.board[fromRow][fromCol] = 0;
-        this.board[midRow][midCol] = 0; // remove captured piece
-
-        // King promotion
-        this.promoteIfNeeded(toRow, toCol);
-
-        // Check for further jumps (multi-jump)
-        const furtherJumps = this.getValidJumps(toRow, toCol);
-        if (furtherJumps.length > 0) {
-            // Must continue jumping
-            this.selectedRow = toRow;
-            this.selectedCol = toCol;
-            this.validMoves = furtherJumps;
-            this.mandatoryJump = { row: toRow, col: toCol };
-            this.renderBoard();
-            // Broadcast move for the jump (but not end turn yet)
-            if (this.gameMode.includes('online')) {
-                App.broadcastMove({
-                    type: 'move',
-                    fromRow: fromRow,
-                    fromCol: fromCol,
-                    toRow: toRow,
-                    toCol: toCol,
-                    player: player
-                });
-            }
-            return;
-        }
-
-        // No further jumps – end turn
-        this.mandatoryJump = null;
-        this.selectedRow = null;
-        this.selectedCol = null;
-        this.validMoves = [];
-        if (this.gameMode.includes('online')) {
-            App.broadcastMove({
-                type: 'move',
-                fromRow: fromRow,
-                fromCol: fromCol,
-                toRow: toRow,
-                toCol: toCol,
-                player: player
-            });
-        }
-        this.endTurn();
-    },
-
-    endTurn: function() {
-        this.currentPlayer = this.currentPlayer === 1 ? 2 : 1;
-        this.renderBoard();
-
-        // Check for game over (no moves)
-        if (!this.hasValidMoves(this.currentPlayer)) {
-            this.isGameActive = false;
-            const winner = this.currentPlayer === 1 ? "White" : "Black";
-            document.getElementById('checkers-status-text').innerText = `🏆 ${winner} Wins!`;
-            document.getElementById('checkers-status-text').style.color = 'var(--win)';
-            return;
-        }
-
-        // Update status
-        if (!this.gameMode.includes('online')) {
-            document.getElementById('checkers-status-text').innerText = this.currentPlayer === 1 ? "Black's Turn" : "White's Turn";
-            document.getElementById('checkers-status-text').style.color = 'var(--text)';
-        } else {
-            if (this.currentPlayer === this.myOnlineSymbol) {
-                document.getElementById('checkers-status-text').innerText = "Your Turn!";
-                document.getElementById('checkers-status-text').style.color = 'var(--text)';
-            } else {
-                document.getElementById('checkers-status-text').innerText = "Opponent's Turn...";
-                document.getElementById('checkers-status-text').style.color = '#94a3b8';
-            }
-        }
-
-        // AI turn if applicable
-        if (this.gameMode.startsWith('ai') && this.currentPlayer === 2 && this.isGameActive) {
-            this.isProcessingMove = true;
-            setTimeout(() => {
-                this.makeAIMove();
-            }, 600);
-        } else {
-            this.isProcessingMove = false;
-        }
-    },
-
-    // ---------- MOVE GENERATION ----------
     isKing: function(row, col) {
-        const piece = this.board[row][col];
-        return piece > 2; // 3 = black king, 4 = white king
+        var piece = this.board[row][col];
+        return piece > 2;
     },
 
     getValidMoves: function(row, col) {
-        const moves = [];
-        const jumps = this.getValidJumps(row, col);
-        if (jumps.length > 0) {
-            // If jumps exist, only jumps are allowed
-            return jumps;
-        }
-        const piece = this.board[row][col];
-        const player = piece % 2 === 1 ? 1 : 2; // odd = black (1), even = white (2) – but with kings 3,4
-        const isKing = piece > 2;
-        const directions = this.getDirections(player, isKing);
-
-        for (let [dr, dc] of directions) {
-            const newR = row + dr;
-            const newC = col + dc;
+        var moves = [];
+        var jumps = this.getValidJumps(row, col);
+        if (jumps.length > 0) return jumps;
+        var piece = this.board[row][col];
+        var player = (piece % 2 === 1) ? 1 : 2;
+        var isKing = piece > 2;
+        var directions = this.getDirections(player, isKing);
+        for (var d = 0; d < directions.length; d++) {
+            var dr = directions[d][0];
+            var dc = directions[d][1];
+            var newR = row + dr;
+            var newC = col + dc;
             if (newR < 0 || newR >= this.SIZE || newC < 0 || newC >= this.SIZE) continue;
             if (this.board[newR][newC] === 0) {
                 moves.push({ row: newR, col: newC, isJump: false });
@@ -366,23 +211,23 @@ const Checkers = {
     },
 
     getValidJumps: function(row, col) {
-        const jumps = [];
-        const piece = this.board[row][col];
-        const player = piece % 2 === 1 ? 1 : 2;
-        const isKing = piece > 2;
-        const directions = this.getDirections(player, isKing);
-
-        for (let [dr, dc] of directions) {
-            const midR = row + dr;
-            const midC = col + dc;
+        var jumps = [];
+        var piece = this.board[row][col];
+        var player = (piece % 2 === 1) ? 1 : 2;
+        var isKing = piece > 2;
+        var directions = this.getDirections(player, isKing);
+        for (var d = 0; d < directions.length; d++) {
+            var dr = directions[d][0];
+            var dc = directions[d][1];
+            var midR = row + dr;
+            var midC = col + dc;
             if (midR < 0 || midR >= this.SIZE || midC < 0 || midC >= this.SIZE) continue;
-            const midPiece = this.board[midR][midC];
+            var midPiece = this.board[midR][midC];
             if (midPiece === 0) continue;
-            const midPlayer = midPiece % 2 === 1 ? 1 : 2;
-            if (midPlayer === player) continue; // can't jump own piece
-
-            const landR = row + 2 * dr;
-            const landC = col + 2 * dc;
+            var midPlayer = (midPiece % 2 === 1) ? 1 : 2;
+            if (midPlayer === player) continue;
+            var landR = row + 2 * dr;
+            var landC = col + 2 * dc;
             if (landR < 0 || landR >= this.SIZE || landC < 0 || landC >= this.SIZE) continue;
             if (this.board[landR][landC] === 0) {
                 jumps.push({ row: landR, col: landC, isJump: true, captured: { row: midR, col: midC } });
@@ -392,21 +237,100 @@ const Checkers = {
     },
 
     getDirections: function(player, isKing) {
-        if (player === 1) { // Black moves down (row+)
+        if (player === 1) {
             return isKing ? [[1,1],[1,-1],[-1,1],[-1,-1]] : [[1,1],[1,-1]];
-        } else { // White moves up (row-)
+        } else {
             return isKing ? [[1,1],[1,-1],[-1,1],[-1,-1]] : [[-1,1],[-1,-1]];
         }
     },
 
+    executeMove: function(toRow, toCol) {
+        var fromRow = this.selectedRow;
+        var fromCol = this.selectedCol;
+        var player = this.board[fromRow][fromCol];
+        this.board[toRow][toCol] = player;
+        this.board[fromRow][fromCol] = 0;
+        this.promoteIfNeeded(toRow, toCol);
+        this.selectedRow = null;
+        this.selectedCol = null;
+        this.validMoves = [];
+        this.mandatoryJump = null;
+        this.endTurn();
+    },
+
+    executeJump: function(toRow, toCol) {
+        var fromRow = this.selectedRow;
+        var fromCol = this.selectedCol;
+        var player = this.board[fromRow][fromCol];
+        var midRow = (fromRow + toRow) / 2;
+        var midCol = (fromCol + toCol) / 2;
+        this.board[toRow][toCol] = player;
+        this.board[fromRow][fromCol] = 0;
+        this.board[midRow][midCol] = 0;
+        this.promoteIfNeeded(toRow, toCol);
+
+        var furtherJumps = this.getValidJumps(toRow, toCol);
+        if (furtherJumps.length > 0) {
+            this.selectedRow = toRow;
+            this.selectedCol = toCol;
+            this.validMoves = furtherJumps;
+            this.mandatoryJump = { row: toRow, col: toCol };
+            this.renderBoard();
+            var statusEl = document.getElementById('checkers-status-text');
+            if (statusEl) {
+                statusEl.innerText = 'Continue jumping!';
+                statusEl.style.color = '#fbbf24';
+            }
+            return;
+        }
+
+        this.mandatoryJump = null;
+        this.selectedRow = null;
+        this.selectedCol = null;
+        this.validMoves = [];
+        this.endTurn();
+    },
+
+    endTurn: function() {
+        if (!this.hasValidMoves(this.currentPlayer)) {
+            this.isGameActive = false;
+            var winner = (this.currentPlayer === 1) ? 'White' : 'Black';
+            var statusEl = document.getElementById('checkers-status-text');
+            if (statusEl) {
+                statusEl.innerText = '🏆 ' + winner + ' Wins!';
+                statusEl.style.color = 'var(--win)';
+            }
+            return;
+        }
+
+        this.currentPlayer = (this.currentPlayer === 1) ? 2 : 1;
+        this.renderBoard();
+
+        var statusEl = document.getElementById('checkers-status-text');
+        if (statusEl) {
+            statusEl.innerText = (this.currentPlayer === 1) ? 'Black\'s Turn' : 'White\'s Turn';
+            statusEl.style.color = 'var(--text)';
+        }
+
+        if (this.gameMode.startsWith('ai') && this.currentPlayer === 2 && this.isGameActive) {
+            this.isProcessingMove = true;
+            var self = this;
+            setTimeout(function() {
+                self.makeAIMove();
+            }, 500);
+        } else {
+            this.isProcessingMove = false;
+        }
+    },
+
     hasValidMoves: function(player) {
-        for (let r = 0; r < this.SIZE; r++) {
-            for (let c = 0; c < this.SIZE; c++) {
-                const piece = this.board[r][c];
+        for (var r = 0; r < this.SIZE; r++) {
+            for (var c = 0; c < this.SIZE; c++) {
+                var piece = this.board[r][c];
                 if (piece === 0) continue;
-                const piecePlayer = piece % 2 === 1 ? 1 : 2;
-                if (piecePlayer === player) {
-                    if (this.getValidMoves(r, c).length > 0) return true;
+                var piecePlayer = (piece % 2 === 1) ? 1 : 2;
+                if (piecePlayer === player && this.getValidMoves(r, c).length > 0) {
+                    return true;
                 }
             }
         }
@@ -414,7 +338,7 @@ const Checkers = {
     },
 
     promoteIfNeeded: function(row, col) {
-        const piece = this.board[row][col];
+        var piece = this.board[row][col];
         if (piece === 1 && row === this.SIZE - 1) {
             this.board[row][col] = 3; // black king
         } else if (piece === 2 && row === 0) {
@@ -422,79 +346,68 @@ const Checkers = {
         }
     },
 
-    // ---------- AI ----------
     makeAIMove: function() {
         if (!this.isGameActive || !this.gameMode.startsWith('ai')) {
             this.isProcessingMove = false;
             return;
         }
 
-        // Gather all valid moves for AI (player 2 = White)
-        let allMoves = [];
-        for (let r = 0; r < this.SIZE; r++) {
-            for (let c = 0; c < this.SIZE; c++) {
-                const piece = this.board[r][c];
+        var candidates = [];
+        for (var r = 0; r < this.SIZE; r++) {
+            for (var c = 0; c < this.SIZE; c++) {
+                var piece = this.board[r][c];
                 if (piece === 0) continue;
-                const piecePlayer = piece % 2 === 1 ? 1 : 2;
+                var piecePlayer = (piece % 2 === 1) ? 1 : 2;
                 if (piecePlayer === 2) {
-                    const moves = this.getValidMoves(r, c);
-                    for (let m of moves) {
-                        allMoves.push({
+                    var moves = this.getValidMoves(r, c);
+                    for (var m = 0; m < moves.length; m++) {
+                        candidates.push({
                             fromRow: r,
                             fromCol: c,
-                            toRow: m.row,
-                            toCol: m.col,
-                            isJump: m.isJump,
-                            captured: m.captured || null
+                            toRow: moves[m].row,
+                            toCol: moves[m].col,
+                            isJump: moves[m].isJump,
+                            captured: moves[m].captured || null
                         });
                     }
                 }
             }
         }
 
-        if (allMoves.length === 0) {
+        if (candidates.length === 0) {
             this.isProcessingMove = false;
             return;
         }
 
-        // AI difficulty
-        let chosenMove;
+        var chosen;
         if (this.gameMode === 'ai-easy') {
-            // Random move
-            chosenMove = allMoves[Math.floor(Math.random() * allMoves.length)];
+            chosen = candidates[Math.floor(Math.random() * candidates.length)];
         } else {
-            // Greedy: prefer jumps, then kings, then random
-            let score = -Infinity;
-            for (let move of allMoves) {
-                let moveScore = move.isJump ? 5 : 1;
-                // Kings are good
-                if (this.board[move.fromRow][move.fromCol] === 2) moveScore += 2;
-                // Simulate to see if we get a king
-                const targetRow = move.toRow;
-                const targetCol = move.toCol;
-                if (targetRow === 0 && move.isJump) moveScore += 3; // promotion via jump
-                else if (targetRow === 0) moveScore += 1;
-                if (moveScore > score) {
-                    score = moveScore;
-                    chosenMove = move;
+            var bestScore = -1;
+            for (var i = 0; i < candidates.length; i++) {
+                var move = candidates[i];
+                var score = move.isJump ? 10 : 1;
+                if (this.board[move.fromRow][move.fromCol] === 2) score += 2;
+                if (move.toRow === 0) score += 5;
+                if (score > bestScore) {
+                    bestScore = score;
+                    chosen = move;
                 }
             }
-            // Slight randomness in hard mode to avoid perfect play
             if (this.gameMode === 'ai-hard' && Math.random() < 0.2) {
-                chosenMove = allMoves[Math.floor(Math.random() * allMoves.length)];
+                chosen = candidates[Math.floor(Math.random() * candidates.length)];
             }
         }
 
-        // Execute move
-        this.selectedRow = chosenMove.fromRow;
-        this.selectedCol = chosenMove.fromCol;
-        this.validMoves = [{ row: chosenMove.toRow, col: chosenMove.toCol, isJump: chosenMove.isJump }];
+        this.selectedRow = chosen.fromRow;
+        this.selectedCol = chosen.fromCol;
+        this.validMoves = [{ row: chosen.toRow, col: chosen.toCol, isJump: chosen.isJump }];
         this.isProcessingMove = false;
-        if (chosenMove.isJump) {
-            this.executeJump(chosenMove.toRow, chosenMove.toCol);
+
+        if (chosen.isJump) {
+            this.executeJump(chosen.toRow, chosen.toCol);
         } else {
-            this.executeMove(chosenMove.toRow, chosenMove.toCol);
+            this.executeMove(chosen.toRow, chosen.toCol);
         }
-        // After move, clear selection (endTurn will render)
     }
 };
