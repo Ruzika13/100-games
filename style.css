@@ -226,3 +226,78 @@ input {
     background: radial-gradient(circle at 35% 35%, #fff, #ccc);
     box-shadow: inset 0 4px 8px rgba(255,255,255,0.4);
 }
+
+/* --- CHECKERS SPECIFIC STYLES --- */
+.checkers-board {
+    display: grid;
+    gap: 2px;
+    max-width: 480px;
+    margin: 0 auto;
+    background: #1e293b;
+    padding: 8px;
+    border-radius: 8px;
+    box-shadow: 0 8px 16px rgba(0,0,0,0.4);
+}
+
+.checkers-cell {
+    aspect-ratio: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    cursor: pointer;
+    border-radius: 4px;
+}
+
+.checkers-cell.light {
+    background: #f0d9b5;
+}
+
+.checkers-cell.dark {
+    background: #b58863;
+}
+
+.checkers-cell.selected {
+    outline: 3px solid #fbbf24;
+    z-index: 2;
+}
+
+.checkers-cell.valid-move {
+    outline: 3px solid #22c55e;
+    z-index: 1;
+}
+
+.checkers-piece {
+    width: 80%;
+    height: 80%;
+    border-radius: 50%;
+    box-shadow: inset -3px -3px 6px rgba(0,0,0,0.6), inset 3px 3px 6px rgba(255,255,255,0.4);
+    transition: transform 0.1s;
+}
+
+.checkers-piece.black {
+    background: radial-gradient(circle at 40% 40%, #555, #000);
+}
+
+.checkers-piece.white {
+    background: radial-gradient(circle at 40% 40%, #fff, #ccc);
+}
+
+.checkers-piece.king::after {
+    content: '👑';
+    position: absolute;
+    font-size: 50%;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    color: #fbbf24;
+    text-shadow: 0 0 4px rgba(0,0,0,0.6);
+}
+
+.checkers-piece.black.king::after {
+    color: #fbbf24;
+}
+
+.checkers-piece.white.king::after {
+    color: #eab308;
+}
